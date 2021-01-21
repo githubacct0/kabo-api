@@ -36,5 +36,7 @@ module KaboApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    config.mailgun_api_key = ENV.fetch("MAILGUN_API_KEY")
   end
 end

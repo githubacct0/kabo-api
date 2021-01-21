@@ -44,3 +44,5 @@ gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 # JWT
 gem "jwt"
+# Devise. Read more: https://github.com/heartcombo/devise
+gem "devise"
