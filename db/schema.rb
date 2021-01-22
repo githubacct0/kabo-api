@@ -10,10 +10,129 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_01_21_110024) do
+ActiveRecord::Schema.define(version: 2021_01_22_081419) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "breeds", force: :cascade do |t|
+    t.string "name"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
+
+  create_table "dogs", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "name"
+    t.integer "main_breed_id"
+    t.integer "secondary_breed_id"
+    t.integer "age_range"
+    t.integer "gender"
+    t.boolean "neutered", default: false
+    t.integer "weight"
+    t.integer "weight_unit"
+    t.integer "body_type"
+    t.integer "activity_level"
+    t.boolean "dry_food"
+    t.boolean "wet_food"
+    t.boolean "other_food"
+    t.string "dry_food_brand"
+    t.string "wet_food_brand"
+    t.string "other_food_brand"
+    t.integer "treats"
+    t.boolean "food_restriction"
+    t.string "food_restriction_items"
+    t.string "food_restriction_custom"
+    t.string "meal_type"
+    t.string "chargebee_subscription_id"
+    t.string "recipe"
+    t.integer "portion"
+    t.string "breed"
+    t.integer "chargebee_unit_price"
+    t.integer "chargebee_plan_units"
+    t.boolean "has_custom_plan"
+    t.integer "age_in_months"
+    t.string "portion_adjustment"
+    t.string "kibble_type"
+    t.boolean "beef_recipe"
+    t.boolean "chicken_recipe"
+    t.boolean "turkey_recipe"
+    t.string "kibble_recipe"
+    t.integer "cooked_portion"
+    t.integer "kibble_portion"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["user_id"], name: "index_dogs_on_user_id"
+  end
+
+  create_table "food_brands", force: :cascade do |t|
+    t.string "name"
+    t.integer "food_type"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
+
+  create_table "serviceable_postal_codes", force: :cascade do |t|
+    t.string "postal_code"
+    t.string "province"
+    t.boolean "fsa"
+    t.text "notes"
+    t.string "city"
+    t.integer "delivery_day"
+    t.boolean "loomis"
+    t.boolean "fedex"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["postal_code"], name: "index_serviceable_postal_codes_on_postal_code"
+  end
+
+  create_table "temp_dogs", force: :cascade do |t|
+    t.bigint "temp_user_id"
+    t.string "name"
+    t.integer "main_breed_id"
+    t.integer "secondary_breed_id"
+    t.integer "age_range"
+    t.integer "gender"
+    t.boolean "neutered"
+    t.integer "weight"
+    t.integer "weight_unit"
+    t.integer "body_type"
+    t.integer "activity_level"
+    t.boolean "dry_food"
+    t.boolean "wet_food"
+    t.boolean "other_food"
+    t.string "dry_food_brand"
+    t.string "wet_food_brand"
+    t.string "other_food_brand"
+    t.integer "treats"
+    t.boolean "food_restriction"
+    t.string "food_restriction_items"
+    t.string "food_restriction_custom"
+    t.string "meal_type"
+    t.string "recipe"
+    t.integer "portion"
+    t.string "breed"
+    t.integer "age_in_months"
+    t.string "kibble_type"
+    t.boolean "beef_recipe"
+    t.boolean "chicken_recipe"
+    t.boolean "turkey_recipe"
+    t.string "kibble_recipe"
+    t.integer "cooked_portion"
+    t.integer "kibble_portion"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["temp_user_id"], name: "index_temp_dogs_on_temp_user_id"
+  end
+
+  create_table "temp_users", force: :cascade do |t|
+    t.string "first_name"
+    t.string "email"
+    t.string "postal_code"
+    t.integer "plan_interval"
+    t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
 
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
