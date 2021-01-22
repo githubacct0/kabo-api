@@ -46,3 +46,7 @@ gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem "jwt"
 # Devise. Read more: https://github.com/heartcombo/devise
 gem "devise"
+# ice_cube - Easy schedule expansion. Read more: https://github.com/seejohnrun/ice_cube
+gem "ice_cube"
+# Chargebee Ruby Client Library. Read more: https://github.com/chargebee/chargebee-ruby
+gem "chargebee", "~> 2"

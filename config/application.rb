@@ -38,5 +38,15 @@ module KaboApi
     config.api_only = true
 
     config.mailgun_api_key = ENV.fetch("MAILGUN_API_KEY")
+    config.heroku = {
+      app_id: ENV.fetch("HEROKU_APP_ID"),
+      app_name: ENV.fetch("HEROKU_APP_NAME"),
+      release_created_at: ENV.fetch("HEROKU_RELEASE_CREATED_AT"),
+      release_version: ENV.fetch("HEROKU_RELEASE_VERSION"),
+      slug_commit: ENV.fetch("HEROKU_SLUG_COMMIT"),
+      slug_description: ENV.fetch("HEROKU_SLUG_DESCRIPTION")
+    }
+
+    config.autoload_paths << Rails.root.join("lib")
   end
 end
