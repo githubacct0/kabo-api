@@ -50,3 +50,7 @@ gem "devise"
 gem "ice_cube"
 # Chargebee Ruby Client Library. Read more: https://github.com/chargebee/chargebee-ruby
 gem "chargebee", "~> 2"
+# sentry-ruby, the Ruby Client for Sentry. Read more: https://github.com/getsentry/sentry-ruby
+gem "sentry-raven"
+# RubyMoney - Money. Read more: https://github.com/RubyMoney/money
+gem "money"
