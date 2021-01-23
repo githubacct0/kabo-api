@@ -5,8 +5,15 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      get "/user" => "users#details"
+      # Account tab
+      get "/user/account" => "users#account"
       post "/user/dogs" => "users#add_dog"
+
+      # Orders tab
+      get "/user/orders" => "users#orders"
+
+      # Notifications
+      get "/user/notifications" => "users#notifications"
     end
   end
 end

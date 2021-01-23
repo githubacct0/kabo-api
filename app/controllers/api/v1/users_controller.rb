@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class Api::V1::UsersController < ApplicationController
-  # Route: /api/v1/user
+  # Route: /api/v1/user/account
   # Method: GET
-  # Get user's account_details, billing, delivery_address
-  def details
+  # Get user's account_details, billing, delivery_address, last 2 order
+  def account
     subscriptions = {}
     subscription = {}
     active_subscription = {}
@@ -56,7 +56,7 @@ class Api::V1::UsersController < ApplicationController
       payment_method: payment_method,
       payment_source: payment_source,
       card: card,
-      orders: orders(subscription: subscription)
+      orders: get_orders(subscription: subscription, limit: 2, loopable: false)
     }, status: 200
   end
 
@@ -66,50 +66,40 @@ class Api::V1::UsersController < ApplicationController
   def add_dog
   end
 
+  # Route: /api/v1/user/notifications
+  # Method: GET
+  # Get user's notifications & promotions
+  def notifications
+  end
+
+  # Route: /api/v1/user/orders
+  # Method: GET
+  # Get all orders of user
+  def orders
+    # Get subscription
+    subscription = {}
+    chargebee_subscriptions = ChargeBee::Subscription.list({
+      "customer_id[is]" => @user.chargebee_customer_id
+    })
+    chargebee_subscriptions.each { |chargebee_subscription| subscription = chargebee_subscription.subscription }
+
+    orders = get_orders(subscription: subscription, limit: 100, loopable: true)
+
+    render json: {
+      orders: orders
+    }, status: 200
+  end
+
   private
-    def orders(subscription:)
-      next_offset = nil
-      all_transactions_list = []
-      all_invoices_list = []
+    def get_orders(subscription:, limit:, loopable:)
       invoices = {}
+      transactions_list = get_transactions_list(limit: limit, loopable: loopable)
+      invoices_list = get_invoices_list(limit: limit, loopable: loopable)
+      invoices_list.each { |invoice| invoices[invoice.invoice.id] = invoice }
 
-      # Invoices
-      loop do
-        invoice_list_query = {
-          "customer_id[is]" => @user.chargebee_customer_id,
-          "sort_by[asc]" => "date",
-          limit: 100
-        }
-        invoice_list_query[:offset] = next_offset if next_offset.present?
-
-        result = ChargeBee::Invoice.list(invoice_list_query)
-        all_invoices_list = result&.map { |invoice| invoice }
-        next_offset = result.next_offset
-
-        break if next_offset.nil?
-      end
-      all_invoices_list.each { |invoice| invoices[invoice.invoice.id] = invoice }
-
-      # Transactions
-      loop do
-        transaction_list_query = {
-          "customer_id[is]" => @user.chargebee_customer_id,
-          "sort_by[asc]" => "date",
-          "status[is]" => "success",
-          limit: 100
-        }
-        transaction_list_query[:offset] = next_offset if next_offset.present?
-
-        result = ChargeBee::Transaction.list(transaction_list_query)
-        all_transactions_list = result&.map { |transaction| transaction }
-        next_offset = result.next_offset
-
-        break if next_offset.nil?
-      end
-
-      orders = all_transactions_list.map { |_transaction|
-        transaction_histories(transaction: _transaction.transaction, subscription: subscription, invoices: invoices)
-      }&.reverse
+      orders = transactions_list.map { |_transaction|
+        get_transaction_histories(transaction: _transaction.transaction, subscription: subscription, invoices: invoices)
+      }
 
       orders
     rescue StandardError => e
@@ -117,7 +107,7 @@ class Api::V1::UsersController < ApplicationController
       []
     end
 
-    def payment_method_name(transaction)
+    def get_payment_method_name(transaction:)
       case transaction.payment_method
       when "paypal_express_checkout" then "PayPal"
       when "apple_pay" then "Apple Pay"
@@ -125,8 +115,8 @@ class Api::V1::UsersController < ApplicationController
       end
     end
 
-    def transaction_histories(transaction:, subscription:, invoices:)
-      payment_method_name = payment_method_name(transaction)
+    def get_transaction_histories(transaction:, subscription:, invoices:)
+      payment_method_name = get_payment_method_name(transaction: transaction)
       history = {
         date_timestamp: transaction.date,
         date: Time.zone.at(transaction.date).strftime("%A %b %d"),
@@ -153,5 +143,52 @@ class Api::V1::UsersController < ApplicationController
       end
 
       history
+    end
+
+    def get_invoices_list(limit:, loopable:)
+      next_offset = nil
+      invoices_list = []
+
+      # Invoices
+      loop do
+        query = {
+          "customer_id[is]" => @user.chargebee_customer_id,
+          "sort_by[desc]" => "date",
+          limit: limit
+        }
+        query[:offset] = next_offset if next_offset.present?
+
+        result = ChargeBee::Invoice.list(query)
+        invoices_list += result&.map { |invoice| invoice }
+
+        next_offset = result.next_offset
+        break if !loopable || next_offset.nil?
+      end
+
+      invoices_list
+    end
+
+    def get_transactions_list(limit:, loopable: true)
+      next_offset = nil
+      transactions_list = []
+
+      # Transactions
+      loop do
+        query = {
+          "customer_id[is]" => @user.chargebee_customer_id,
+          "sort_by[desc]" => "date",
+          "status[is]" => "success",
+          limit: limit
+        }
+        query[:offset] = next_offset if next_offset.present?
+
+        result = ChargeBee::Transaction.list(query)
+        transactions_list += result&.map { |transaction| transaction }
+
+        next_offset = result.next_offset
+        break if !loopable || next_offset.nil?
+      end
+
+      transactions_list
     end
 end
