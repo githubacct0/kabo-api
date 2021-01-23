@@ -54,7 +54,7 @@ module KaboApi
       user: ENV.fetch("PAYPAL_API_USER")
     }
     config.stripe_publishable_key = ENV.fetch("STRIPE_PUBLISHABLE_KEY")
-    # config.heroku_app_name = ENV.fetch("HEROKU_APP_NAME")
+    config.heroku_app_name = ENV.fetch("HEROKU_APP_NAME")
 
     config.autoload_paths << Rails.root.join("lib")
   end
