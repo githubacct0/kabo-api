@@ -19,7 +19,7 @@ class Api::V1::UsersController < ApplicationController
           checkout_price_total: checkout_price_total
         }
       else
-        if Rails.configuration.heroku[:app_name] != "kabo-app" && Rails.configuration.heroku[:app_name] != "kabo-beta" && !params[:qa_jump_by_days].blank?
+        if Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && !params[:qa_jump_by_days].blank?
           @user.update_columns(qa_jump_by_days: params[:qa_jump_by_days])
         end
 

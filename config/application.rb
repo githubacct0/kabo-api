@@ -37,15 +37,24 @@ module KaboApi
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    config.mailgun_api_key = ENV.fetch("MAILGUN_API_KEY")
-    config.heroku = {
-      app_id: ENV.fetch("HEROKU_APP_ID"),
-      app_name: ENV.fetch("HEROKU_APP_NAME"),
-      release_created_at: ENV.fetch("HEROKU_RELEASE_CREATED_AT"),
-      release_version: ENV.fetch("HEROKU_RELEASE_VERSION"),
-      slug_commit: ENV.fetch("HEROKU_SLUG_COMMIT"),
-      slug_description: ENV.fetch("HEROKU_SLUG_DESCRIPTION")
+    config.chargebee = {
+      api_key: ENV.fetch("CHARGEBEE_API_KEY"),
+      site: ENV.fetch("CHARGEBEE_SITE")
     }
+    config.google_api = {
+      private_key: ENV.fetch("GOOGLE_API_PRIVATE_KEY"),
+      public_key: ENV.fetch("GOOGLE_API_PUBLIC_KEY")
+    }
+    config.lob_api_private_key = ENV.fetch("LOB_API_PRIVATE_KEY")
+    config.mailgun_api_key = ENV.fetch("MAILGUN_API_KEY")
+    config.paypal_api = {
+      password: ENV.fetch("PAYPAL_API_PWD"),
+      signature: ENV.fetch("PAYPAL_API_SIGNATURE"),
+      url: ENV.fetch("PAYPAL_API_URL"),
+      user: ENV.fetch("PAYPAL_API_USER")
+    }
+    config.stripe_publishable_key = ENV.fetch("STRIPE_PUBLISHABLE_KEY")
+    # config.heroku_app_name = ENV.fetch("HEROKU_APP_NAME")
 
     config.autoload_paths << Rails.root.join("lib")
   end

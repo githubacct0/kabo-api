@@ -247,7 +247,7 @@ module MyLib
           )
 
           begin
-            if Rails.env.production? && Rails.configuration.heroku[:app_name].to_s == "kabo-app"
+            if Rails.env.production? && Rails.configuration.heroku_app_name.to_s == "kabo-app"
               LobAddressVerificationWorker.perform_async({
                 shipping_street_address: user.shipping_street_address,
                 shipping_apt_suite: user.shipping_apt_suite,

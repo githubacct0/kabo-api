@@ -589,7 +589,7 @@ module MyLib
           .or(ServiceablePostalCode.where(postal_code: postal_code[0..5].upcase, fedex: true)).first
 
         begin
-          if Rails.env.production? && (Rails.configuration.heroku[:app_name] == "kabo-app")
+          if Rails.env.production? && (Rails.configuration.heroku_app_name == "kabo-app")
             AirtableWorker.perform_async(
               table_id: "appuRzASkhkHMbt6Z",
               view_name: "Postal Codes",
