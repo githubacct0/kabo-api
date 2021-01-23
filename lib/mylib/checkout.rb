@@ -4,10 +4,10 @@ module MyLib
   class Checkout
     class << self
       def estimate_v2(user, dog, original_referral_code = nil, referral_code_from_cookie = nil, postal_code = nil)
-        referral_code_check = ReferralHelper.check_code(original_referral_code)
+        referral_code_check = MyLib::Referral.check_code(original_referral_code)
         request_referral_code_check = referral_code_check
 
-        referral_code_from_cookie_check = ReferralHelper.check_code(referral_code_from_cookie)
+        referral_code_from_cookie_check = MyLib::Referral.check_code(referral_code_from_cookie)
 
         if !referral_code_check && referral_code_from_cookie_check && !referral_code_from_cookie.blank?
           referral_code = referral_code_from_cookie
@@ -153,7 +153,7 @@ module MyLib
 
         default_delivery_date = subscription_start_date + 7.days
         if !postal_code.nil?
-          default_delivery_date = subscription_start_date + AccountHelper.delivery_date_offset_by_postal_code(postal_code)
+          default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(postal_code)
 
           # Manual override for AB/BC orders (Nov 11)
           if ["AB", "BC"].include?(get_province_from_postal_code(postal_code))
@@ -248,11 +248,11 @@ module MyLib
       end
 
       def estimate(user, dog, referral_code = "40off", referral_code_from_cookie = nil, postal_code = nil)
-        referral_code_check = ReferralHelper.check_code(referral_code)
+        referral_code_check = MyLib::Referral.check_code(referral_code)
 
         request_referral_code_check = referral_code_check
 
-        referral_code_from_cookie_check = ReferralHelper.check_code(referral_code_from_cookie)
+        referral_code_from_cookie_check = MyLib::Referral.check_code(referral_code_from_cookie)
 
         if !referral_code_check && referral_code_from_cookie_check && !referral_code_from_cookie.blank?
           referral_code = referral_code_from_cookie
@@ -381,7 +381,7 @@ module MyLib
 
         default_delivery_date = subscription_start_date + 7.days
         if !postal_code.nil?
-          default_delivery_date = subscription_start_date + AccountHelper.delivery_date_offset_by_postal_code(postal_code)
+          default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(postal_code)
         end
 
         productReturn = {
@@ -422,11 +422,11 @@ module MyLib
       end
 
       def estimate_single_product(user, quantity = 1, referral_code = nil, referral_code_from_cookie = nil, postal_code = nil)
-        referral_code_check = ReferralHelper.check_code(referral_code)
+        referral_code_check = MyLib::Referral.check_code(referral_code)
 
         request_referral_code_check = referral_code_check
 
-        # referral_code_from_cookie_check = ReferralHelper.check_code(referral_code_from_cookie)
+        # referral_code_from_cookie_check = MyLib::Referral.check_code(referral_code_from_cookie)
 
         # if !referral_code_check && referral_code_from_cookie_check && !referral_code_from_cookie.blank?
         #   referral_code = referral_code_from_cookie
@@ -501,9 +501,9 @@ module MyLib
         default_delivery_date = subscription_start_date + 7.days + kibble_delivery_offset
         if !postal_code.nil?
           if user.one_time_purchase_sku.include?("kibble")
-            default_delivery_date = subscription_start_date + AccountHelper.delivery_date_for_kibble_offset_by_postal_code(postal_code) + 1.day
+            default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_for_kibble_offset_by_postal_code(postal_code) + 1.day
           else
-            default_delivery_date = subscription_start_date + AccountHelper.delivery_date_offset_by_postal_code(postal_code)
+            default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(postal_code)
           end
         end
 

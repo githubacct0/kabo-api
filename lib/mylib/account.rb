@@ -11,7 +11,7 @@ module MyLib
 
       def delivery_date_offset_by_postal_code(postal_code)
         ActiveRecord::Base.logger.silence do
-          return 7.days if CheckoutHelper.ace_postal_code(postal_code)
+          return 7.days if MyLib::Checkout.ace_postal_code(postal_code)
 
           postal_code_match = []
 

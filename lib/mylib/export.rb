@@ -329,8 +329,8 @@ module MyLib
             delivery_days = ""
 
             if ["AB", "BC", "SK"].include?(order.shipping_address.state_code)
-              loomis_delivery_day = AccountHelper.delivery_date_offset_by_loomis_postal_code(order.shipping_address.zip)
-              fedex_delivery_day = AccountHelper.delivery_date_offset_by_fedex_postal_code(order.shipping_address.zip)
+              loomis_delivery_day = MyLib::Account.delivery_date_offset_by_loomis_postal_code(order.shipping_address.zip)
+              fedex_delivery_day = MyLib::Account.delivery_date_offset_by_fedex_postal_code(order.shipping_address.zip)
 
               if order.shipping_address.state_code == "AB" && [6, 7].include?(loomis_delivery_day)
                 fulfillment_center = "Calgary_AB"
@@ -348,7 +348,7 @@ module MyLib
                 fulfillment_center = "Kelowna_BC - Express Standard Overnight" # Switched to Kelowna for holiday delivery cycle
               end
             else
-              fedex_delivery_day = AccountHelper.delivery_date_offset_by_fedex_postal_code(order.shipping_address.zip)
+              fedex_delivery_day = MyLib::Account.delivery_date_offset_by_fedex_postal_code(order.shipping_address.zip)
 
               if fedex_delivery_day == 6
                 fulfillment_center = "Mississauga_ON"
@@ -399,7 +399,7 @@ module MyLib
                 pieces: 1,
                 weight: (plan_units/16).round(2) + box_ice_weight_lbs, # in lbs
                 delivery_instructions: order.shipping_address.line3,
-                fulfillment_service: CheckoutHelper.ace_postal_code(order.shipping_address.zip) ? "Atripco" : "", # Using text "Atripco" to support existing Apps Script functionality
+                fulfillment_service: MyLib::Checkout.ace_postal_code(order.shipping_address.zip) ? "Atripco" : "", # Using text "Atripco" to support existing Apps Script functionality
                 subscription_status: subscription_status,
                 fulfillment_center: fulfillment_center,
                 delivery_days: delivery_days,
@@ -577,7 +577,7 @@ module MyLib
               line_item_quantity: plan_units,
               line_item_name: order.order_line_items[0].description,
               line_item_sku: plan_name,
-              first_delivery_date: (order_delivery_date + AccountHelper.delivery_date_offset_by_postal_code(order.shipping_address.zip)).strftime("%d-%b-%y"),
+              first_delivery_date: (order_delivery_date + MyLib::Account.delivery_date_offset_by_postal_code(order.shipping_address.zip)).strftime("%d-%b-%y"),
               # TODO
               reference: order.document_number,
               name: "#{order.shipping_address.first_name},#{order.shipping_address.last_name}",
@@ -589,7 +589,7 @@ module MyLib
               contact_name: "#{order.shipping_address.first_name} #{order.shipping_address.last_name}",
               phone_number: order.shipping_address.phone,
               delivery_instructions: order.shipping_address.line3,
-              fulfillment_service: CheckoutHelper.ace_postal_code(order.shipping_address.zip) ? "ACE" : "",
+              fulfillment_service: MyLib::Checkout.ace_postal_code(order.shipping_address.zip) ? "ACE" : "",
             })
           else
             orders_to_ship.push({

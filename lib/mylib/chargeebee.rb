@@ -24,7 +24,7 @@ module MyLib
                   line1: user.billing_street_address,
                   line2: user.billing_apt_suite,
                   city: user.billing_city,
-                  state: CheckoutHelper.get_province_from_postal_code(user.billing_postal_code),
+                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
                   zip: user.billing_postal_code,
                   country: "CA",
                   phone: user.billing_phone_number,
@@ -41,7 +41,7 @@ module MyLib
                   line1: user.billing_street_address,
                   line2: user.billing_apt_suite,
                   city: user.billing_city,
-                  state: CheckoutHelper.get_province_from_postal_code(user.billing_postal_code),
+                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
                   zip: user.billing_postal_code,
                   country: "CA",
                   phone: user.billing_phone_number,
@@ -64,7 +64,7 @@ module MyLib
                   extended_addr: user.shipping_apt_suite,
                   extended_addr2: user.shipping_delivery_instructions,
                   city: user.shipping_city,
-                  state_code: CheckoutHelper.get_province_from_postal_code(user.shipping_postal_code),
+                  state_code: MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code),
                   zip: user.shipping_postal_code,
                   country: "CA",
                   email: user.email,
@@ -93,8 +93,8 @@ module MyLib
                     line2: user.shipping_apt_suite,
                     line3: user.shipping_delivery_instructions,
                     city: user.shipping_city,
-                    state_code: CheckoutHelper.get_province_from_postal_code(user.shipping_postal_code),
-                    state: CheckoutHelper.full_province_from_code(CheckoutHelper.get_province_from_postal_code(user.shipping_postal_code)),
+                    state_code: MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code),
+                    state: MyLib::Checkout.full_province_from_code(MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code)),
                     zip: user.shipping_postal_code,
                     country: "CA",
                     email: user.email,
@@ -267,7 +267,7 @@ module MyLib
       end
 
       def unpause_subscription(user, dog)
-        subscription_start_date = IceCubeHelper.subscription_start_date
+        subscription_start_date = MyLib::IceCube.subscription_start_date
 
         if !user.stripe_token.blank? || !user.reference_id.blank?
           begin
@@ -311,7 +311,7 @@ module MyLib
               line1: user.billing_street_address,
               line2: user.billing_apt_suite,
               city: user.billing_city,
-              state: CheckoutHelper.get_province_from_postal_code(user.billing_postal_code),
+              state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
               zip: user.billing_postal_code,
               country: "CA",
               phone: user.billing_phone_number,
@@ -387,7 +387,7 @@ module MyLib
             line2: user.shipping_apt_suite,
             line3: user.shipping_delivery_instructions,
             city: user.shipping_city,
-            state_code: CheckoutHelper.get_province_from_postal_code(user.shipping_postal_code),
+            state_code: MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code),
             zip: user.shipping_postal_code,
             country: "CA",
             phone: user.shipping_phone_number,
@@ -408,7 +408,7 @@ module MyLib
       end
 
       def reactivate_subscription(user, dog)
-        subscription_start_date = IceCubeHelper.subscription_start_date
+        subscription_start_date = MyLib::IceCube.subscription_start_date
 
         if !user.stripe_token.blank? || !user.reference_id.blank?
           begin
@@ -452,7 +452,7 @@ module MyLib
               line1: user.billing_street_address,
               line2: user.billing_apt_suite,
               city: user.billing_city,
-              state: CheckoutHelper.get_province_from_postal_code(user.billing_postal_code),
+              state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
               zip: user.billing_postal_code,
               country: "CA",
               phone: user.billing_phone_number,
@@ -514,7 +514,7 @@ module MyLib
             line2: user.shipping_apt_suite,
             line3: user.shipping_delivery_instructions,
             city: user.shipping_city,
-            state_code: CheckoutHelper.get_province_from_postal_code(user.shipping_postal_code),
+            state_code: MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code),
             zip: user.shipping_postal_code,
             country: "CA",
             phone: user.shipping_phone_number,
