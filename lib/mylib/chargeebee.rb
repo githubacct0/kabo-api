@@ -267,7 +267,7 @@ module MyLib
       end
 
       def unpause_subscription(user, dog)
-        subscription_start_date = MyLib::IceCube.subscription_start_date
+        subscription_start_date = MyLib::Icecube.subscription_start_date
 
         if !user.stripe_token.blank? || !user.reference_id.blank?
           begin
@@ -408,7 +408,7 @@ module MyLib
       end
 
       def reactivate_subscription(user, dog)
-        subscription_start_date = MyLib::IceCube.subscription_start_date
+        subscription_start_date = MyLib::Icecube.subscription_start_date
 
         if !user.stripe_token.blank? || !user.reference_id.blank?
           begin

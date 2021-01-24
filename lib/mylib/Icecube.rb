@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module MyLib
-  class IceCube
+  class Icecube
     class << self
       # Upcoming billing date
       def subscription_start_date

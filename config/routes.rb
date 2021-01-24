@@ -10,10 +10,10 @@ Rails.application.routes.draw do
       post "/user/dogs" => "users#add_dog"
 
       # Orders tab
-      get "/user/orders" => "users#orders"
+      get "/user/orders" => "orders#index"
 
       # Notifications
-      get "/user/notifications" => "users#notifications"
+      get "/user/notifications" => "notifications#index"
     end
   end
 end
