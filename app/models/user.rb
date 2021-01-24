@@ -7,4 +7,6 @@ class User < ApplicationRecord
 
   # Relations
   has_many :dogs, dependent: :destroy
+
+  # Validations
 end

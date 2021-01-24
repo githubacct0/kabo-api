@@ -71,4 +71,25 @@ class Api::V1::UsersController < ApplicationController
   # Get user's notifications & promotions
   def notifications
   end
+
+  # Route: /api/v1/user/password
+  # Method: PUT
+  # Update user's password
+  def update_password
+    status = @user.update(update_password_params)
+
+    render json: {
+      status: status
+    }, status: 200
+  rescue => err
+    render json: {
+      status: false,
+      err: err.message
+    }, status: 500
+  end
+
+  private
+    def update_password_params
+      params.permit(:password, :password_confirmation)
+    end
 end

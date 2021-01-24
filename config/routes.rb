@@ -8,6 +8,7 @@ Rails.application.routes.draw do
       # Account tab
       get "/user/account" => "users#account"
       post "/user/dogs" => "users#add_dog"
+      put "/user/password" => "users#update_password"
 
       # Orders tab
       get "/user/orders" => "orders#index"
