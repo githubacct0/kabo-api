@@ -54,3 +54,5 @@ gem "chargebee", "~> 2"
 gem "sentry-raven"
 # RubyMoney - Money. Read more: https://github.com/RubyMoney/money
 gem "money"
+# A simple wraper for posting to slack channels. Read more: https://github.com/stevenosloan/slack-notifier
+gem "slack-notifier"
