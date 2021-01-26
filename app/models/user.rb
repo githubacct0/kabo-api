@@ -68,10 +68,10 @@ class User < ApplicationRecord
   end
 
   def unit_price(sku)
-    if created_at < DateTime.parse("Aug 25, 2020 at 10pm EDT") # Date of deploy, updating to 0.60/oz
-      50
+    if self.created_at < DateTime.parse("Aug 25, 2020 at 10pm EDT") # Date of deploy, updating to 0.60/oz
+      sku.include?("lamb") ? 75 : 50
     else
-      60
+      sku.include?("lamb") ? 75 : 60
     end
   end
 
@@ -341,6 +341,12 @@ class User < ApplicationRecord
             unit_price: unit_price("turkey_#{chargebee_plan_interval}"),
             quantity: dog.plan_units_v2
           }) if dog.turkey_recipe
+
+          subscription_param_addons.push({
+            id: "lamb_#{self.chargebee_plan_interval}",
+            unit_price: self.unit_price("lamb_#{self.chargebee_plan_interval}"),
+            quantity: dog.plan_units_v2
+          }) if dog.lamb_recipe
 
           subscription_param_addons.push({
             id: "#{dog.kibble_recipe}_kibble_#{chargebee_plan_interval}",
