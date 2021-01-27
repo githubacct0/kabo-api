@@ -57,14 +57,14 @@ module KaboApi
     config.heroku_app_name = ENV.fetch("HEROKU_APP_NAME", "")
     config.klaviyo_api_key = ENV.fetch("KLAVIYO_API_KEY")
     config.slack_webhooks = {
-      "hook1": "https://hooks.slack.com/services/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",
-      "hook2": "https://hooks.slack.com/services/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",
-      "hook3": "https://hooks.slack.com/services/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",
-      "hook4": "https://hooks.slack.com/services/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",
-      "hook5": "https://hooks.slack.com/services/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",
-      "hook6": "https://hooks.slack.com/services/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",
-      "hook7": "https://hooks.slack.com/services/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",
-      "hook8": "https://hooks.slack.com/services/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"
+      accountpage: "https://hooks.slack.com/services/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",
+      growth_snackbar: "https://hooks.slack.com/services/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",
+      growth_turkey: "https://hooks.slack.com/services/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",
+      growth_holidayroast: "https://hooks.slack.com/services/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",
+      growth_lambtopper: "https://hooks.slack.com/services/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",
+      growth_treats: "https://hooks.slack.com/services/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",
+      growth_kibble: "https://hooks.slack.com/services/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",
+      growth: "https://hooks.slack.com/services/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"
     }
     config.emails = {
       temp_user: "temp-user@kabo.co",

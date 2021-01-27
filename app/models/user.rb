@@ -48,7 +48,7 @@ class User < ApplicationRecord
       unless value.length == 6 && MyLib::Checkout.serviceable_postal_code(value)
         if Rails.env.production?
           begin
-            notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:hook8]
+            notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:growth]
             notifier.post text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{record.email} just tried to use an unserviceable postal code - #{value}", icon_emoji: ":octagonal_sign:"
           rescue StandardError => e
             Raven.capture_exception(e)
