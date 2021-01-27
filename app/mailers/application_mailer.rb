@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
 class ApplicationMailer < ActionMailer::Base
-  default from: "Kabo <help@kabo.co>"
+  default from: "Kabo <#{Rails.configuration.emails[:help]}>"
   layout "mailer"
 end

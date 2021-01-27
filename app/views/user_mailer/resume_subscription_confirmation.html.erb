@@ -1,0 +1,56 @@
+<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation">
+  <tbody>
+    <tr>
+    <td class="pc-fb-font" style="font-family: Arial, sans-serif; font-size: 24px; font-weight: 700; line-height: 34px; letter-spacing: -0.4px; color: #151515; padding: 0 20px" valign="top">Your order is confirmed</td>
+    </tr>
+    <tr>
+    <td height="10" style="font-size: 1px; line-height: 1px;">&nbsp;</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+    <td class="pc-fb-font" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: 300; line-height: 28px; letter-spacing: -0.2px; color: #9B9B9B; padding: 0 20px" valign="top">
+      <span style="color: #111111;">
+        Hey <%= @user.first_name %>,
+        <br />
+        <%= @product_description %>
+        <br />
+        <br />
+        <strong>Shipping Details</strong>
+        <br />
+        Please review your shipping information below to make sure everything is in order.
+        <br /><br />
+        <%= @shipping_address["first_name"] %> <%= @shipping_address["last_name"] %>
+        <br />
+        <%= @shipping_address["line1"] %>
+        <br />
+        <% if !@shipping_address["line2"].blank? %>
+          <%= @shipping_address["line2"] %>
+          <br />
+        <% end %>
+        <% if !@shipping_address["line3"].blank? %>
+          <%= @shipping_address["line3"] %>
+          <br />
+        <% end %>
+        <%= @shipping_address["city"] %>
+        <br />
+        <%= @shipping_address["zip"] %>
+        <br />
+        <%= @shipping_address["phone"] %>
+        <br /><br />
+        If you have any changes just email us at help@kabo.co and someone will be able to assist you.
+
+        <br />
+        <br />
+        Regards,
+        <br />
+        Kabo Care Team
+
+      </span>
+    </td>
+    </tr>
+    <tr>
+    <td height="20" style="font-size: 1px; line-height: 1px;">&nbsp;</td>
+    </tr>
+  </tbody>
+</table>
