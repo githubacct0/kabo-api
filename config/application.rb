@@ -67,8 +67,14 @@ module KaboApi
       "hook8": "https://hooks.slack.com/services/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"
     }
     config.emails = {
-      temp_user: "temp-user@kabo.co"
+      temp_user: "temp-user@kabo.co",
+      help: "help@kabo.co"
     }
+    config.airtable = {
+      api_key: "keydimZCpsszg7Vez",
+      app_key: "appSjmgLxrzrIGcN6"
+    }
+    config.facebook_access_token = ENV.fetch("FACEBOOK_ACCESS_TOKEN")
 
     config.autoload_paths << Rails.root.join("lib")
   end
