@@ -68,7 +68,7 @@ class User < ApplicationRecord
   end
 
   def unit_price(sku)
-    if self.created_at < DateTime.parse("Aug 25, 2020 at 10pm EDT") # Date of deploy, updating to 0.60/oz
+    if created_at < DateTime.parse("Aug 25, 2020 at 10pm EDT") # Date of deploy, updating to 0.60/oz
       sku.include?("lamb") ? 75 : 50
     else
       sku.include?("lamb") ? 75 : 60
@@ -131,7 +131,7 @@ class User < ApplicationRecord
   def send_to_klaviyo
     if Rails.env.production?
       begin
-        if !email.include? Rails.configuration.emails[:temp_user] # excluding users that skip email on the onboarding
+        if email.exclude? Rails.configuration.emails[:temp_user] # excluding users that skip email on the onboarding
           klaviyo_response = RestClient.post "https://a.klaviyo.com/api/v2/list/LTjrjX/subscribe",
             {
               api_key: Rails.configuration.klaviyo_api_key,
@@ -264,7 +264,7 @@ class User < ApplicationRecord
         end
 
         begin
-          if !stripe_token.blank?
+          if stripe_token.present?
             payment_method = {
               type: stripe_type,
               tmp_token: stripe_token
@@ -308,10 +308,10 @@ class User < ApplicationRecord
             }
           )
 
-          errors.add(:base, "Sorry, there was a problem with your payment method, please check the details and try again")
+          self.errors.add(:base, "Sorry, there was a problem with your payment method, please check the details and try again")
           raise ActiveRecord::Rollback
         rescue StandardError => e
-          errors.add(:base, "Sorry, there was a problem processing your checkout, please try again")
+          self.errors.add(:base, "Sorry, there was a problem processing your checkout, please try again")
           Raven.capture_exception(e)
           raise ActiveRecord::Rollback
         end
@@ -343,15 +343,15 @@ class User < ApplicationRecord
           }) if dog.turkey_recipe
 
           subscription_param_addons.push({
-            id: "lamb_#{self.chargebee_plan_interval}",
-            unit_price: self.unit_price("lamb_#{self.chargebee_plan_interval}"),
+            id: "lamb_#{chargebee_plan_interval}",
+            unit_price: unit_price("lamb_#{chargebee_plan_interval}"),
             quantity: dog.plan_units_v2
           }) if dog.lamb_recipe
 
           subscription_param_addons.push({
             id: "#{dog.kibble_recipe}_kibble_#{chargebee_plan_interval}",
             quantity: dog.kibble_quantity_v2
-          }) if !dog.kibble_recipe.blank?
+          }) if dog.kibble_recipe.present?
 
           # TRIAL ONE-TIME ADDONS
           subscription_event_based_addons.push({
@@ -387,24 +387,8 @@ class User < ApplicationRecord
             on_event: "subscription_creation",
             charge_once: true,
             charge_on: "on_event"
-          }) if !dog.kibble_recipe.blank?
+          }) if dog.kibble_recipe.present?
 
-          # if dogs.where.not(meal_type: "food_restriction").size == 1 && dog.plan_units < plan_unit_fee_limit
-          #   subscription_param_addons.push(
-          #     {
-          #       :id => "delivery-service-fee-#{how_often.split("_")[0]}-weeks"
-          #     }
-          #   )
-
-          #   subscription_event_based_addons.push(
-          #     {
-          #       :id => "delivery-service-fee-one-time",
-          #       on_event: "subscription_creation",
-          #       charge_once: true,
-          #       charge_on: "on_event"
-          #     }
-          #   )
-          # end
           begin
             subscription_result = ChargeBee::Subscription.create_for_customer(customer_result.customer.id, {
               plan_id: "#{chargebee_plan_interval}",
@@ -440,16 +424,16 @@ class User < ApplicationRecord
               }
             )
 
-            errors.add(:base, "Sorry, there was a problem with your payment method, please check the details and try again")
+            self.errors.add(:base, "Sorry, there was a problem with your payment method, please check the details and try again")
             raise ActiveRecord::Rollback
           rescue StandardError => e
-            errors.add(:base, "Sorry, there was a problem processing your checkout, please try again")
+            self.errors.add(:base, "Sorry, there was a problem processing your checkout, please try again")
             Raven.capture_exception(e)
             raise ActiveRecord::Rollback
           end
           dog.update_column(:chargebee_subscription_id, subscription_result.subscription.id)
 
-          if !dog.kibble_type.blank?
+          if dog.kibble_type.present?
             kibble_onboarding_slack_notification(dog)
           end
 
@@ -465,7 +449,7 @@ class User < ApplicationRecord
                 "Hearty Turkey": dog.turkey_recipe,
                 "Kibble Recipe": dog.kibble_recipe,
                 "OZ per Cooked Recipe": (dog.chicken_recipe || dog.beef_recipe || dog.turkey_recipe) ? dog.plan_units_v2 : 0,
-                "Kibble Quantity": !dog.kibble_recipe.blank? ? dog.kibble_quantity_v2 : 0,
+                "Kibble Quantity": dog.kibble_recipe.present? ? dog.kibble_quantity_v2 : 0,
                 "Total Price": ("%.2f" % ((subscription_result.subscription.addons.map { |addon| addon.amount }.sum).to_i/100.0)).to_f,
                 "Province": shipping_province
               }
@@ -475,7 +459,8 @@ class User < ApplicationRecord
           end
         end
 
-        chargebee_customer_id = customer_result.customer.id
+        self.chargebee_customer_id = customer_result.customer.id
+        self.verified = true
 
         begin
           if Rails.env.production? && Rails.configuration.heroku_app_name == "kabo-app"
