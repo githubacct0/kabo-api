@@ -6,8 +6,8 @@ class ExportWorker
 
   def perform(type, user_email, from = nil, to = nil)
     export_csv = case type
-                 when "recurring" then ExportHelper.orders_for_production_and_shipping(from, to)
-                 when "one-time-purchase" then ExportHelper.orders_for_production_and_shipping_one_time_purchase
+                 when "recurring" then MyLib::Export.orders_for_production_and_shipping(from, to)
+                 when "one-time-purchase" then MyLib::Export.orders_for_production_and_shipping_one_time_purchase
     end
 
     temp_file = Tempfile.open("export-", Rails.root.join("tmp")) do |f|

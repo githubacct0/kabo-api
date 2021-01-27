@@ -5,7 +5,7 @@ class CancelledSubscriptionsWorker
   sidekiq_options queue: :cancelled_subscription, retry: false
 
   def perform(user_email)
-    export_csv = ExportHelper.cancelled_subscriptions
+    export_csv = MyLib::Export.cancelled_subscriptions
 
     temp_file = Tempfile.open("export-", Rails.root.join("tmp")) do |f|
       f.print(export_csv)

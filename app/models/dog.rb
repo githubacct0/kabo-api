@@ -224,7 +224,7 @@ class Dog < ApplicationRecord
     result = ChargeBee::Estimate.create_subscription({
       subscription: {
         plan_id: "25_beef_2_weeks",
-        plan_quantity: HomeHelper.plan_units("2_weeks", "25_beef", calories_required)
+        plan_quantity: MyLib::Home.plan_units("2_weeks", "25_beef", calories_required)
       },
     })
     invoice_estimate = result.estimate.invoice_estimate
@@ -234,7 +234,7 @@ class Dog < ApplicationRecord
     result = ChargeBee::Estimate.create_subscription({
       subscription: {
         plan_id: "100_beef_2_weeks",
-        plan_quantity: HomeHelper.plan_units("2_weeks", "100_beef", calories_required)
+        plan_quantity: MyLib::Home.plan_units("2_weeks", "100_beef", calories_required)
       },
     })
     invoice_estimate = result.estimate.invoice_estimate
@@ -249,18 +249,18 @@ class Dog < ApplicationRecord
       result = ChargeBee::Estimate.create_subscription({
         subscription: {
           plan_id: "#{portion}_#{recipe}_2_weeks",
-          plan_quantity: HomeHelper.plan_units("2_weeks", "#{portion}_#{recipe}", calories_required)
+          plan_quantity: MyLib::Home.plan_units("2_weeks", "#{portion}_#{recipe}", calories_required)
         }
       })
       invoice_estimate = result.estimate.invoice_estimate
       no_discount_weekly = "#{Money.new(invoice_estimate.total/2).format}/week"
     else
-      referral_code_check = ReferralHelper.check_code(referral_code)
+      referral_code_check = MyLib::Referral.check_code(referral_code)
       # Estimate without taxes, with discount
       result = ChargeBee::Estimate.create_subscription({
         subscription: {
           plan_id: "#{portion}_#{recipe}_2_weeks",
-          plan_quantity: HomeHelper.plan_units("2_weeks", "#{portion}_#{recipe}", calories_required)
+          plan_quantity: MyLib::Home.plan_units("2_weeks", "#{portion}_#{recipe}", calories_required)
         },
         coupon_ids: [referral_code_check ? referral_code : "40off"],
       })
