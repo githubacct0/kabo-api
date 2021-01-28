@@ -55,7 +55,7 @@ class Api::V1::UsersController < ApplicationController
         @user.update_columns(subscription_phase_status: subscription_phase[:status])
       end
 
-      all_active_or_future_subscriptions_are_custom = (subscription_statuses.count { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).count)
+      all_active_or_future_subscriptions_are_custom = (subscription_statuses.size { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).size)
 
       if subscription_phase[:status] == "waiting_for_trial_shipment" || subscription_phase[:status] == "waiting_for_resume_shipment"
         amounts_paid = []
@@ -123,6 +123,110 @@ class Api::V1::UsersController < ApplicationController
       starting_date: active_subscription ? active_subscription.next_billing_at : nil,
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
     }, status: 200
+  end
+
+  # Route: /api/v1/user/delivery_frequency
+  # Method: PUT
+  # Update user's delivery frequency
+  def update_delivery_frequency
+    if update_delivery_frequency_params_valid?
+      # Get delivery frequency params
+      amount_of_food = update_delivery_frequency_params[:amount_of_food]
+      how_often = update_delivery_frequency_params[:how_often]
+      how_often = "#{amount_of_food.split("_")[0]}_weeks" if amount_of_food.split("_")[0] == how_often.split("_")[0]
+      meal_type = [amount_of_food, how_often].uniq.join("_")
+      starting_date = update_delivery_frequency_params[:start_date].to_i
+
+      original_chargebee_plan_interval = @user.chargebee_plan_interval
+      original_next_billing_date = nil
+
+      # Update chargebee plan
+      @user.update({
+        chargebee_plan_interval: meal_type
+      })
+
+      # Update dogs
+      dogs = @user.dogs
+      dogs.each do |dog|
+        if dog.chargebee_subscription_id.present? && !dog.has_custom_plan
+          subscription_result = ChargeBee::Subscription.retrieve(dog.chargebee_subscription_id)
+
+          if ["future", "active"].include?(subscription_result.subscription.status)
+            # add addon for lower AOV customers, only if the customer has 1 dog
+            subscription_param_addons = []
+            if dogs.size == 1 && dog.kibble_portion.blank? && dog.plan_units_v2(true) < @user.plan_unit_fee_limit
+              subscription_param_addons.push(
+                {
+                  id: "delivery-service-fee-#{@user.how_often.split("_")[0]}-weeks"
+                }
+              )
+            end
+
+            # Recurring Addons
+            dog_plan_units_v2 = dog.plan_units_v2
+            dog.beef_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("beef", meal_type, dog_plan_units_v2))
+            dog.chicken_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("chicken", meal_type, dog_plan_units_v2))
+            dog.turkey_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("turkey", meal_type, dog_plan_units_v2))
+            dog.lamb_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("lamb", meal_type, dog_plan_units_v2))
+            subscription_param_addons.push({
+              id: "#{dog.kibble_recipe}_kibble_#{meal_type}",
+              quantity: dog.kibble_quantity_v2
+            }) if dog.kibble_recipe.present?
+
+            MyLib::Chargebee.update_subscription(
+              subscription_status: subscription_result.subscription.status,
+              has_scheduled_changes: subscription_result.subscription.has_scheduled_changes,
+              dog_chargebee_subscription_id: dog.chargebee_subscription_id,
+              chargebee_plan_interval: meal_type,
+              addons: subscription_param_addons
+            )
+
+            if subscription_result.subscription.next_billing_at != starting_date
+              original_next_billing_date = subscription_result.subscription.next_billing_at
+              # Verify starting date submitted is a valid option
+              schedule_to_verify_starting_date = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) do |s|
+                s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
+              end
+
+              schedule_to_verify_starting_date_timestamps = schedule_to_verify_starting_date.next_occurrences(3, Time.zone.now).map { |date| date.to_i }
+
+              if schedule_to_verify_starting_date_timestamps.include?(starting_date) ||
+                (Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && @user.qa_jump_by_days > 0)
+                ChargeBee::Subscription.change_term_end(dog.chargebee_subscription_id, {
+                  term_ends_at: starting_date
+                })
+              end
+            end
+          end
+
+        end
+      end
+
+      if Rails.env.production?
+        begin
+          notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
+          notifier.post(
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their delivery frequency from #{original_chargebee_plan_interval} to #{submitted_meal_type}",
+            icon_emoji: ":shallow_pan_of_food:"
+          ) if original_chargebee_plan_interval != meal_type
+          notifier.post(
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their next billing date from #{Time.zone.at(original_next_billing_date)} to #{Time.zone.at(starting_date)}",
+            icon_emoji: ":shallow_pan_of_food:"
+          ) if original_next_billing_date
+        rescue StandardError => e
+          Raven.capture_exception(e)
+        end
+      end
+
+      render json: {
+        status: true
+      }, status: 200
+    else
+      render json: {
+        status: false,
+        err: "Missed params!"
+      }, status: 500
+    end
   end
 
   # Route: /api/v1/user/details
@@ -221,5 +325,15 @@ class Api::V1::UsersController < ApplicationController
   private
     def update_password_params
       params.permit(:password, :password_confirmation)
+    end
+
+    def update_delivery_frequency_params
+      params.permit(:amount_of_food, :how_often, :starting_date)
+    end
+
+    def update_delivery_frequency_params_valid?
+      update_delivery_frequency_params[:amount_of_food].present? &&
+        update_delivery_frequency_params[:how_often].present? &&
+        update_delivery_frequency_params[:starting_date].present?
     end
 end

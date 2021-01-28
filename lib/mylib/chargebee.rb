@@ -557,6 +557,32 @@ module MyLib
 
         subscription_update_result
       end
+
+      # Update subscription
+      def update_subscription(
+        subscription_status:,
+        has_scheduled_changes:,
+        dog_chargebee_subscription_id:,
+        chargebee_plan_interval:,
+        addons:
+      )
+        existing_coupon_codes = []
+        if has_scheduled_changes
+          scheduled_changes = ChargeBee::Subscription.retrieve_with_scheduled_changes(dog_chargebee_subscription_id).subscription
+          scheduled_changes.coupons && existing_coupon_codes.push(scheduled_changes.coupons[0].coupon_id)
+          ChargeBee::Subscription.remove_scheduled_changes(dog_chargebee_subscription_id)
+        end
+
+        update_params = {
+          plan_id: chargebee_plan_interval,
+          addons: addons,
+          replace_addon_list: true,
+          coupon_ids: existing_coupon_codes
+        }
+        subscription_status == "active" && update_params[:end_of_term] = true
+
+        ChargeBee::Subscription.update(dog_chargebee_subscription_id, update_params)
+      end
     end
   end
 end

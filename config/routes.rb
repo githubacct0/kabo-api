@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Dashboard tab
       get "/user/account" => "users#account"
+      put "/user/delivery_frequency" => "users#update_delivery_frequency"
 
       # Account tab
       get "/user/details" => "users#details"
