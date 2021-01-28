@@ -122,6 +122,8 @@ class Api::V1::UsersController < ApplicationController
       default_delivery_date: default_delivery_date,
       starting_date: active_subscription ? active_subscription.next_billing_at : nil,
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
+      # Next occurencies for pause plans
+      next_occurrencies: MyLib::Icecube.subscription_next_occurrencies
     }, status: 200
   end
 
@@ -217,6 +219,30 @@ class Api::V1::UsersController < ApplicationController
           Raven.capture_exception(e)
         end
       end
+
+      render json: {
+        status: true
+      }, status: 200
+    else
+      render json: {
+        status: false,
+        err: "Missed params!"
+      }, status: 500
+    end
+  end
+
+  # Route: /api/v1/user/subscriptions/pause
+  # Method: POST
+  # Pause subscriptions
+  def pause_subscriptions
+    if pause_subscriptions_params_valid?
+      pause_until = pause_subscriptions_params[:pause_until]
+
+      @user.dogs.each { |dog|
+        pause_params = { pause_option: "immediately" }
+        pause_until != "forever" && pause_params[:resume_date] = Time.parse(pause_until).utc.to_i
+        ChargeBee::Subscription.pause(dog.chargebee_subscription_id, pause_params)
+      }
 
       render json: {
         status: true
@@ -335,5 +361,13 @@ class Api::V1::UsersController < ApplicationController
       update_delivery_frequency_params[:amount_of_food].present? &&
         update_delivery_frequency_params[:how_often].present? &&
         update_delivery_frequency_params[:starting_date].present?
+    end
+
+    def pause_subscriptions_params
+      params.permit(:pause_until)
+    end
+
+    def pause_subscriptions_params_valid?
+      pause_subscriptions_params[:pause_until].present?
     end
 end
