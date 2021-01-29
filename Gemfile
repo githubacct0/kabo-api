@@ -44,3 +44,33 @@ gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 # JWT
 gem "jwt"
+# Devise. Read more: https://github.com/heartcombo/devise
+gem "devise"
+# ice_cube - Easy schedule expansion. Read more: https://github.com/seejohnrun/ice_cube
+gem "ice_cube"
+# Chargebee Ruby Client Library. Read more: https://github.com/chargebee/chargebee-ruby
+gem "chargebee", "~> 2"
+# sentry-ruby, the Ruby Client for Sentry. Read more: https://github.com/getsentry/sentry-ruby
+gem "sentry-raven"
+# RubyMoney - Money. Read more: https://github.com/RubyMoney/money
+gem "money"
+# A simple wraper for posting to slack channels. Read more: https://github.com/stevenosloan/slack-notifier
+gem "slack-notifier"
+# REST Client -- simple DSL for accessing HTTP and REST resources. Read more: https://github.com/rest-client/rest-client
+gem "rest-client"
+# Mailgun-Ruby. Read more: https://github.com/mailgun/mailgun-ruby
+gem "mailgun-ruby"
+# Sidekiq. Read more: https://github.com/mperham/sidekiq
+gem "sidekiq"
+# Redis. Read more: https://github.com/redis/redis-rb
+gem "redis"
+# Lob API. Read more: https://github.com/lob/lob-ruby
+gem "lob"
+# Seed Fu. Read more: https://github.com/mbleigh/seed-fu
+gem "seed-fu", "~> 2.3"
+# Alternative Airtable Ruby libary to airtable-ruby. Read more: https://github.com/sirupsen/airrecord
+gem "airrecord"
+# google-cloud-storage. Read more: https://github.com/googleapis/google-cloud-ruby/tree/master/google-cloud-storage
+gem "google-cloud-storage"
+# Facebook Business SDK for Ruby. Read more: https://github.com/facebook/facebook-ruby-business-sdk
+gem "facebookbusiness"

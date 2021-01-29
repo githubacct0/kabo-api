@@ -1,0 +1,74 @@
+<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation">
+  <tbody>
+    <tr>
+    <td class="pc-fb-font" style="font-family: Arial, sans-serif; font-size: 24px; font-weight: 700; line-height: 34px; letter-spacing: -0.4px; color: #151515; padding: 0 20px" valign="top">Your order is confirmed</td>
+    </tr>
+    <tr>
+    <td height="10" style="font-size: 1px; line-height: 1px;">&nbsp;</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+    <td class="pc-fb-font" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: 300; line-height: 28px; letter-spacing: -0.2px; color: #9B9B9B; padding: 0 20px" valign="top">
+      <span style="color: #111111;">
+        Hey <%= @user.first_name %>,
+        <br />
+        Congratulations on your Kabo order! Below are your order details:
+        <br />
+        <br />
+        <strong>Order Details</strong>
+        <br />
+        Product: <%= @invoice.line_items[0].description %>
+        <br />
+        Quantity: <%= @invoice.line_items[0].quantity %>
+        <br />
+        Amount Paid: <%= Money.new(@invoice.total).format %>
+        <br />
+        <br />
+        <strong>Shipping Details</strong>
+        <br />
+        Please review your shipping information below to make sure everything is in order.
+        <br /><br />
+        <%= @user.shipping_first_name %> <%= @user.shipping_last_name %>
+        <br />
+        <%= @user.shipping_street_address %>
+        <br />
+        <% if !@user.shipping_apt_suite.blank? %>
+          <%= @user.shipping_apt_suite %>
+          <br />
+        <% end %>
+        <% if !@user.shipping_delivery_instructions.blank? %>
+          <%= @user.shipping_delivery_instructions %>
+          <br />
+        <% end %>
+        <%= @user.shipping_city %>
+        <br />
+        <%= @user.shipping_postal_code %>
+        <br />
+        <%= @user.shipping_phone_number %>
+        <br /><br />
+        Also make sure you are using a residential address that is accessible from 8am to 8pm as we cannot guarantee delivery times.
+        <br />
+        <br />
+        <strong>What's Next?</strong>
+        <br />
+        You will get a follow up email with your confirmed delivery date in the next 24 hours. Be sure to check your spam so you don't miss out on any notifications.
+        <br /><br />
+        Then we will send another email on the delivery week to let you know we've started making your order and again on your delivery date with your tracking information.
+        <br /><br />
+        If you have any changes just email us at help@kabo.co and someone will be able to assist you.
+
+        <br />
+        <br />
+        Regards,
+        <br />
+        Kabo Care Team
+
+      </span>
+    </td>
+    </tr>
+    <tr>
+    <td height="20" style="font-size: 1px; line-height: 1px;">&nbsp;</td>
+    </tr>
+  </tbody>
+</table>

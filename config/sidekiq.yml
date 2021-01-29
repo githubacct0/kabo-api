@@ -1,0 +1,12 @@
+:concurrency: 5
+production:
+  :concurrency: 10
+:queues:
+  - chargebee_remove_unbilled_charges_from_subscription
+  - airtable
+  - cancelled_subscription
+  - export
+  - facebook
+  - klaviyo
+  - lob_address_verification
+  - slack
