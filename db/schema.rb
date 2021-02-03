@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_01_28_075115) do
+ActiveRecord::Schema.define(version: 2021_01_30_081559) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -158,7 +158,7 @@ ActiveRecord::Schema.define(version: 2021_01_28_075115) do
     t.boolean "admin", default: false
     t.boolean "trial", default: false
     t.string "trial_dog_name"
-    t.boolean "billing_override"
+    t.boolean "billing_override", default: false, null: false
     t.string "referral_code"
     t.string "klaviyo_id"
     t.datetime "last_active_at"
@@ -166,11 +166,11 @@ ActiveRecord::Schema.define(version: 2021_01_28_075115) do
     t.string "subscription_phase_status"
     t.integer "trial_length", default: 2
     t.datetime "first_checkout_at"
-    t.integer "qa_jump_by_days"
-    t.boolean "one_time_purchase"
+    t.integer "qa_jump_by_days", default: 0, null: false
+    t.boolean "one_time_purchase", default: false, null: false
     t.string "one_time_purchase_dog_names"
     t.string "one_time_purchase_sku"
-    t.integer "one_time_purchase_quantity"
+    t.integer "one_time_purchase_quantity", default: 0, null: false
     t.string "one_time_purchase_email"
     t.string "shipping_postal_code"
     t.string "shipping_province"
