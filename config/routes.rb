@@ -29,6 +29,9 @@ Rails.application.routes.draw do
 
       # Notifications
       get "/user/notifications" => "notifications#index"
+
+      # Onboarding
+      get "/onboarding/signup" => "onboarding#index"
     end
   end
 
