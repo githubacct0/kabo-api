@@ -72,7 +72,9 @@ module KaboApi
     }
     config.airtable = {
       api_key: "keydimZCpsszg7Vez",
-      app_key: "appSjmgLxrzrIGcN6"
+      app_key: "appSjmgLxrzrIGcN6",
+      subscription_cancel_app_key: "appiOFOflVtMygAtC",
+      subscription_resume_app_key: "apposChn4Ra3STOgW"
     }
     config.facebook_access_token = ENV.fetch("FACEBOOK_ACCESS_TOKEN", "")
 

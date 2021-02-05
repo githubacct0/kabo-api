@@ -23,14 +23,23 @@ class Api::V1::UsersController < ApplicationController
     })
     chargebee_subscriptions.each do |chargebee_subscription|
       subscription = chargebee_subscription.subscription
-      active_subscription = subscription if ["active", "future"].include? subscription.status
+      is_active = ["active", "future"].include? subscription.status
+      if is_active
+        active_subscription = subscription
+        invoice_estimate = ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate
+        invoice_estimate_total = invoice_estimate.total
+        invoice_estimate_description = invoice_estimate.line_items.select { |li| li.subscription_id == subscription.id }[0].description
+      else
+        invoice_estimate_total = "N/A"
+        invoice_estimate_description = "N/A"
+      end
       subscriptions[subscription.id] = {
         id: subscription.id,
         status: subscription.status,
-        invoice_estimate_total: (subscription.status == "active" || subscription.status == "future") ? ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate.total : "N/A",
-        invoice_estimate_description: (subscription.status == "active" || subscription.status == "future") ? ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate.line_items.select { |li| li.subscription_id == subscription.id }[0].description : "N/A",
+        invoice_estimate_total: invoice_estimate_total,
+        invoice_estimate_description: invoice_estimate_description,
         shipping_province: subscription.shipping_address.state_code,
-        addons: subscription.addons ? subscription.addons.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } } : []
+        addons: subscription.addons.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
       }
       card = chargebee_subscription.card
       shipping_address = subscription&.shipping_address
@@ -39,9 +48,7 @@ class Api::V1::UsersController < ApplicationController
 
     subscription_statuses = subscriptions.map { |s| s[1][:status] }
 
-    if (["paused", "cancelled"] & subscription_statuses).any?
-      @user.update_columns(subscription_phase_status: "normal_user_scheduled_order")
-    end
+    @user.update_columns(subscription_phase_status: "normal_user_scheduled_order") if (["paused", "cancelled"] & subscription_statuses).any?
 
     subscription_phase = nil
     payment_method_icon = nil
@@ -51,53 +58,42 @@ class Api::V1::UsersController < ApplicationController
     if (["active", "future"] & subscription_statuses).any?
       subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
-      if @user.subscription_phase_status != subscription_phase[:status]
-        @user.update_columns(subscription_phase_status: subscription_phase[:status])
-      end
+      @user.update_columns(subscription_phase_status: subscription_phase[:status]) if @user.subscription_phase_status != subscription_phase[:status]
 
-      all_active_or_future_subscriptions_are_custom = (subscription_statuses.size { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).size)
+      all_active_or_future_subscriptions_are_custom = (subscription_statuses.count { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).size)
 
       if subscription_phase[:status] == "waiting_for_trial_shipment" || subscription_phase[:status] == "waiting_for_resume_shipment"
         amounts_paid = []
-        payment_method_icon = "generic-cc"
-
+        transaction_list_query = {
+          "type[in]" => "['payment']",
+          "customer_id[is]" => @user.chargebee_customer_id
+        }
         if subscription_phase[:status] == "waiting_for_resume_shipment"
           # Get payment amount
-          list = ChargeBee::Transaction.list({
-            "type[in]" => "['payment']",
-            "customer_id[is]" => @user.chargebee_customer_id,
-            "date[between]" => [active_subscription.activated_at, active_subscription.activated_at + 2.days], # 2.day buffer incase someone makes an upsell purchase
-          })
+          transaction_list_query[:date[between]] = [active_subscription.activated_at, active_subscription.activated_at + 2.days]
         else
           # Get payment amount
-          list = ChargeBee::Transaction.list({
-            "type[in]" => "['payment']",
-            "customer_id[is]" => @user.chargebee_customer_id,
-            "date[between]" => [subscription_created_at, subscription_created_at + 2.days], # 2.day buffer incase someone makes an upsell purchase
-          })
+          transaction_list_query[:date[between]] = [subscription_created_at, subscription_created_at + 2.days]
         end
 
-        list.each do |entry|
-          amounts_paid.push(entry.transaction.amount)
-          if entry.transaction.payment_method == "paypal_express_checkout"
-            payment_method_icon = "paypal-logo"
-          elsif entry.transaction.payment_method == "apple_pay"
-            payment_method_icon = "apple-pay-logo"
-          else
-            payment_method_icon = "generic-cc"
+        transaction_list = ChargeBee::Transaction.list(transaction_list_query)
+
+        transaction_list.each do |entry|
+          transaction = entry.transaction
+          amounts_paid.push(transaction.amount)
+          payment_method_icon = case transaction.payment_method
+                                when "paypal_express_checkout" then "paypal-logo"
+                                when "apple_pay" then "apple-pay-logo"
+                                else "generic-cc"
           end
 
-          payment_method_details = ["paypal_express_checkout", "apple_pay"].include?(entry.transaction.payment_method) ? "" : "Card ending in #{entry.transaction.masked_card_number.last(4)}"
+          payment_method_details = ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method) ? "" : "Card ending in #{transaction.masked_card_number.last(4)}"
         end
 
         total_paid = Money.new(amounts_paid.sum).format
       end
     end
-
-    schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) do |s|
-      s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-    end
-    subscription_start_date = schedule.next_occurrence.utc.to_i
+    subscription_start_date = MyLib::Icecube.subscription_start_date
     purchase_by_date = (Time.now + 2.days).strftime("%b %e, %Y")
     if Time.now + 2.days > (Time.zone.at(subscription_start_date))
       purchase_by_date = Time.zone.at(subscription_start_date).strftime("%b %e")
@@ -123,7 +119,8 @@ class Api::V1::UsersController < ApplicationController
       starting_date: active_subscription ? active_subscription.next_billing_at : nil,
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
       # Next occurencies for pause plans
-      next_occurrencies: MyLib::Icecube.subscription_next_occurrencies
+      next_occurrencies: MyLib::Icecube.subscription_next_occurrencies,
+      skipped_first_box: @user.skipped_first_box
     }, status: 200
   end
 
@@ -219,30 +216,6 @@ class Api::V1::UsersController < ApplicationController
           Raven.capture_exception(e)
         end
       end
-
-      render json: {
-        status: true
-      }, status: 200
-    else
-      render json: {
-        status: false,
-        err: "Missed params!"
-      }, status: 500
-    end
-  end
-
-  # Route: /api/v1/user/subscriptions/pause
-  # Method: POST
-  # Pause subscriptions
-  def pause_subscriptions
-    if pause_subscriptions_params_valid?
-      pause_until = pause_subscriptions_params[:pause_until]
-
-      @user.dogs.each { |dog|
-        pause_params = { pause_option: "immediately" }
-        pause_until != "forever" && pause_params[:resume_date] = Time.parse(pause_until).utc.to_i
-        ChargeBee::Subscription.pause(dog.chargebee_subscription_id, pause_params)
-      }
 
       render json: {
         status: true
@@ -361,13 +334,5 @@ class Api::V1::UsersController < ApplicationController
       update_delivery_frequency_params[:amount_of_food].present? &&
         update_delivery_frequency_params[:how_often].present? &&
         update_delivery_frequency_params[:starting_date].present?
-    end
-
-    def pause_subscriptions_params
-      params.permit(:pause_until)
-    end
-
-    def pause_subscriptions_params_valid?
-      pause_subscriptions_params[:pause_until].present?
     end
 end
