@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
   devise_for :admin_users
   devise_for :users
@@ -12,7 +14,9 @@ Rails.application.routes.draw do
       # get "/user/meal_plan" => "users#meal_plan"
       # get "/user/delivery_frequency" => "users#delivery_frequency"
       put "/user/delivery_frequency" => "users#update_delivery_frequency"
-      post "/user/subscriptions/pause" => "users#pause_subscriptions"
+      post "/user/subscriptions/pause" => "subscriptions#pause"
+      post "/user/subscriptions/resume" => "subscriptions#resume"
+      post "/user/subscriptions/cancel" => "subscriptions#cancel"
 
       # Account tab
       get "/user/details" => "users#details"
