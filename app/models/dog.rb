@@ -335,4 +335,49 @@ class Dog < ApplicationRecord
       quantity: quantity
     }
   end
+
+  # Onboarding data
+  class << self
+    # Get breed list
+    def breeds
+      Breed.find_each.reject { |breed| breed.name&.downcase == "unknown" }.map { |breed|
+        { label: breed.name, value: breed.id }
+      }
+    end
+
+    # Get age list
+    def ages
+      Constants::AGE_OPTIONS.map { |age|
+        { label: age[0], value: age[1] }
+      }
+    end
+
+    # Get genders
+    def genders
+      ["Female", "Male"].map { |gender|
+        { label: gender, value: gender == "Male" }
+      }
+    end
+
+    # Get weight unit list
+    def weight_units
+      [ 0, "lbs", "kg" ].map { |unit|
+        { label: unit, value: unit }
+      }
+    end
+
+    # Get body types
+    def body_types
+      Constants::BODY_TYPES.each_with_index.map { |type, index|
+        { label: type, value: index }
+      }
+    end
+
+    # Get activity levels
+    def activity_levels
+      Constants::ACTIVITY_LEVELS.each_with_index.map { |type, index|
+        { label: type, value: index }
+      }
+    end
+  end
 end
