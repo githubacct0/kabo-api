@@ -91,4 +91,17 @@ module Constants
     ["Moisture", "10.0% max"],
     ["Calorie Content", "3570 kcal/kg"]
   ]
+
+  BODY_TYPES = %w(
+    Skinny
+    Ideal
+    Rounded
+    Chunky
+  )
+
+  ACTIVITY_LEVELS = %w(
+    Lazy
+    Ideal
+    Very\ active
+  )
 end

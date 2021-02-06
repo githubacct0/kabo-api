@@ -2,58 +2,53 @@
 
 class Api::V1::OnboardingController < ActionController::API
   def index
-    step = dog_params[:step]
+    input = dog_params[:input]
 
-    if step == "start"
-      breeds = Breed.find_each.reject { |breed| breed.name&.downcase == "unknown" }.map { |breed|
-        { label: breed.name, value: breed.id }
-      }
+    breeds = Dog.breeds
+    ages = Dog.ages
+    genders = Dog.genders
+    weight_units = Dog.weight_units
+    body_types = Dog.body_types
+    activity_levels = Dog.activity_levels
 
-      ages = Constants::AGE_OPTIONS.map { |age|
-        { label: age[0], value: age[1] }
-      }
+    if input.present?
+      input_params = input.split(",")
+      data = {}
+      input_params.include?("breeds") && data.merge!({ breeds: breeds })
+      input_params.include?("ages") && data.merge!({ ages: ages })
+      input_params.include?("genders") && data.merge!({ genders: genders })
+      input_params.include?("weight_units") && data.merge!({ weight_units: weight_units })
+      input_params.include?("body_types") && data.merge!({ body_types: body_types })
+      input_params.include?("activity_levels") && data.merge!({ activity_levels: activity_levels })
 
-      render json: {
+      render json: data, status: 200
+    else
+      step = dog_params[:step]
+
+      start_data = {
         breeds: breeds,
         ages: ages
-      }, status: 200
-    elsif step == "detail"
-      genders = ["Female", "Male"].map { |gender|
-        { label: gender, value: gender == "Male" }
       }
 
-      weight_units = [ 0, "lbs", "kg" ].map { |unit|
-        { label: unit, value: unit }
-      }
-
-      body_types = %w(
-        Skinny
-        Ideal
-        Rounded
-        Chunky
-      ).each_with_index.map { |type, index|
-        { label: type, value: index }
-      }
-
-      activity_levels = %w(
-        Lazy
-        Ideal
-        Very\ active
-      ).each_with_index.map { |type, index|
-        { label: type, value: index }
-      }
-
-      render json: {
+      detail_data = {
         genders: genders,
         weight_units: weight_units,
         body_types: body_types,
         activity_levels: activity_levels
       }
+
+      if step == "start"
+        render json: start_data, status: 200
+      elsif step == "detail"
+        render json: detail_data, status: 200
+      else
+        render json: start_data.merge(detail_data), status: 200
+      end
     end
   end
 
   private
     def dog_params
-      params.permit(:step)
+      params.permit(:step, :input)
     end
 end
