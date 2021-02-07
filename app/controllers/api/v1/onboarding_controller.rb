@@ -121,6 +121,16 @@ class Api::V1::OnboardingController < ActionController::API
     end
   end
 
+  # Create temp user
+  def create_temp_user
+    temp_user = TempUser.new
+    temp_user.save(validate: false)
+
+    render json: {
+      temp_user_id: temp_user.id
+    }, status: 200
+  end
+
   private
     def dog_params
       params.permit(:step, :input)
