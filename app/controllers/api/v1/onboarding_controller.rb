@@ -96,8 +96,41 @@ class Api::V1::OnboardingController < ActionController::API
     }, status: 200
   end
 
+  # Get daily portions
+  def portions
+    if portions_params_valid?
+      dog = portions_params[:dog]
+      daily_portions = [
+        {
+          portion: 25,
+          description: "About 25% of #{dog}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!"
+        },
+        {
+          portion: 100,
+          description: "A complete and balanced diet for #{dog}. You will receive enough food for 100% of #{dog}’s daily caloric needs, which is 1091 calories."
+        }
+      ]
+      render json: {
+        daily_portions: daily_portions
+      }, status: 200
+    else
+      render json: {
+        status: false,
+        err: "Missed params!"
+      }, status: 500
+    end
+  end
+
   private
     def dog_params
       params.permit(:step, :input)
+    end
+
+    def portions_params
+      params.permit(:dog)
+    end
+
+    def portions_params_valid?
+      portions_params.present?
     end
 end
