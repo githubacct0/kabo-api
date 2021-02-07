@@ -32,6 +32,7 @@ Rails.application.routes.draw do
 
       # Onboarding
       get "/onboarding/signup" => "onboarding#index"
+      get "/onboarding/recipes" => "onboarding#recipes"
     end
   end
 

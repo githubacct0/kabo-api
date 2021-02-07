@@ -47,6 +47,55 @@ class Api::V1::OnboardingController < ActionController::API
     end
   end
 
+  # Get recipes
+  def recipes
+    recipes = [
+      {
+        name: "Tender Chicken",
+        recipe: "chicken",
+        image: ""
+      },
+      {
+        name: "Savoury Beef",
+        recipe: "beef",
+        image: ""
+      },
+      {
+        name: "Hearty Turkey",
+        recipe: "turkey",
+        image: ""
+      },
+      {
+        name: "Luscious Lamb",
+        recipe: "lamb",
+        image: ""
+      }
+    ]
+
+    kibbles = [
+      {
+        name: "Chicken",
+        recipe: "chicken",
+        image: ""
+      },
+      {
+        name: "Turkey & Salmon",
+        recipe: "turkey+salmon",
+        image: ""
+      },
+      {
+        name: "Duck",
+        recipe: "duck",
+        image: ""
+      }
+    ]
+
+    render json: {
+      recipes: recipes,
+      kibbles: kibbles
+    }, status: 200
+  end
+
   private
     def dog_params
       params.permit(:step, :input)
