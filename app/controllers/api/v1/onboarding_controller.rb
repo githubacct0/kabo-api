@@ -164,15 +164,20 @@ class Api::V1::OnboardingController < ActionController::API
       }, status: 500
     else
       step = onboarding_params[:step]
-      if ["detail", "recipes"].include? step
-        temp_user.update({ temp_dogs_attributes: onboarding_params[:dogs] })
+      update_params = {}
 
-        render json: {
-          status: true,
-          temp_user_id: temp_user.id,
-          temp_dog_ids: temp_user.temp_dog_ids
-        }, status: 200
+      if ["detail", "recipes", "portions"].include?(step)
+        update_params[:plan_interval] = onboarding_params[:plan_interval] if step == "portions"
+        update_params[:temp_dogs_attributes] = onboarding_params[:dogs]
       end
+
+      temp_user.update(update_params)
+
+      render json: {
+        status: true,
+        temp_user_id: temp_user.id,
+        temp_dog_ids: temp_user.temp_dog_ids
+      }, status: 200
     end
   end
 
@@ -197,6 +202,8 @@ class Api::V1::OnboardingController < ActionController::API
         params.require(:onboarding).permit(:step, dogs: [:id, :gender, :neutered, :weight, :weight_unit, :body_type, :activity_level])
       when "recipes"
         params.require(:onboarding).permit(:step, dogs: [:id, :chicken_recipe, :beef_recipe, :turkey_recipe, :lamb_recipe, :kibble_recipe])
+      when "portions"
+        params.require(:onboarding).permit(:step, :plan_interval, dogs: [:id, :cooked_portion, :kibble_portion])
       end
     end
 end
