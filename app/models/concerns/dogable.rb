@@ -7,13 +7,6 @@ module Dogable
     belongs_to :main_breed, class_name: "Breed", optional: true
     belongs_to :secondary_breed, class_name: "Breed", optional: true
 
-    # Valdation
-    validates_inclusion_of :neutered, in: [true, false]
-    validates_inclusion_of :gender, in: [Constants::FEMALE, Constants::MALE]
-    validates_inclusion_of :weight_unit, in: [Constants::LBS, Constants::KG]
-    # validates_inclusion_of :meal_type, :in => Constants::MEAL_TYPES
-    validates_inclusion_of :age_in_months, in: 0..240
-
     enum gender: [ :female, :male ]
     enum weight_unit: [ :lbs, :kg ]
   end
@@ -117,8 +110,11 @@ module Dogable
     end
   end
 
-  def topper_available
-    !(weight_unit == "lbs" && weight <= 9) && !(weight_unit == "kg" && weight <= 4)
+  def has_food_restriction
+    if food_restriction_items.any? && food_restriction
+      (food_restriction_items & ["beef", "fish"]).any?
+    else false
+    end
   end
 
   def has_possible_food_restriction # TODO: Update for multiple recipes if adding food restriction question back to signup
@@ -167,5 +163,9 @@ module Dogable
 
   def recipes
     [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe, kibble_recipe].reject(&:blank?)
+  end
+
+  def topper_available
+    !(weight_unit == "lbs" && weight <= 9) && !(weight_unit == "kg" && weight <= 4)
   end
 end

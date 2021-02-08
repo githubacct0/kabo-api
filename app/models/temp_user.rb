@@ -10,4 +10,8 @@ class TempUser < ApplicationRecord
   def calculated_trial_length
     temp_dogs.size == 1 && !temp_dogs.first.topper_available ? 4 : 2
   end
+
+  def temp_dog_ids
+    temp_dogs.map { |temp_dog| temp_dog.id }
+  end
 end

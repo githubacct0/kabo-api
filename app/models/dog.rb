@@ -6,6 +6,13 @@ class Dog < ApplicationRecord
   # Relations
   belongs_to :user
 
+  # Validations
+  validates_inclusion_of :neutered, in: [true, false]
+  validates_inclusion_of :gender, in: [Constants::FEMALE, Constants::MALE]
+  validates_inclusion_of :weight_unit, in: [Constants::LBS, Constants::KG]
+  # validates_inclusion_of :meal_type, :in => Constants::MEAL_TYPES
+  validates_inclusion_of :age_in_months, in: 0..240
+
   attr_accessor :turkey_quantity, :treat_quantity, :treat_sku
 
   def kibble_quantity(plan_interval = "",  _kibble_type = "")
@@ -315,15 +322,6 @@ class Dog < ApplicationRecord
     else
       [["Beef (100% portion)", "100_beef"], ["Chicken (100% portion)", "100_chicken"], ["Beef + Chicken (100% portion)", "100_beef+chicken"]]
     end
-  end
-
-  def has_food_restriction
-    if food_restriction_items.present?
-      return true if food_restriction_items.include?("beef")
-      return true if food_restriction_items.include?("fish")
-    end
-
-    false
   end
 
   # Recurring Addons

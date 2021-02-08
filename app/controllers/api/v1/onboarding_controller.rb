@@ -126,12 +126,32 @@ class Api::V1::OnboardingController < ActionController::API
 
   # Create temp user
   def create_temp_user
-    temp_user = TempUser.new
-    temp_user.save(validate: false)
+    step = onboarding_params[:step]
+    if step == "start"
+      temp_user = TempUser.create({ temp_dogs_attributes: onboarding_params[:dogs] })
 
-    render json: {
-      temp_user_id: temp_user.id
-    }, status: 200
+      render json: {
+        status: true,
+        temp_user_id: temp_user.id,
+        temp_dog_ids: temp_user.temp_dog_ids
+      }, status: 200
+    elsif step == "detail"
+      temp_user = TempUser.find(onboarding_params[:user_id])
+      if temp_user.present?
+        temp_user.update({ temp_dogs_attributes: onboarding_params[:dogs] })
+
+        render json: {
+          status: true,
+          temp_user_id: temp_user.id,
+          temp_dog_ids: temp_user.temp_dog_ids
+        }, status: 200
+      else
+        render json: {
+          status: false,
+          err: "Temp User doesn't exist!"
+        }, status: 500
+      end
+    end
   end
 
   private
@@ -145,5 +165,14 @@ class Api::V1::OnboardingController < ActionController::API
 
     def portions_params_valid?
       portions_params.present?
+    end
+
+    def onboarding_params
+      case params[:step]
+      when "start"
+        params.require(:onboarding).permit(:step, dogs: [:name, :breed, :age_in_months]).to_h
+      when "detail"
+        params.require(:onboarding).permit(:step, :user_id, dogs: [:id, :gender, :neutered, :weight, :weight_unit, :body_type, :activity_level])
+      end
     end
 end

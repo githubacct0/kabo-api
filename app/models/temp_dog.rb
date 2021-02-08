@@ -17,13 +17,6 @@ class TempDog < ApplicationRecord
     end
   end
 
-  def has_food_restriction
-    if food_restriction_items.any? && food_restriction
-      (food_restriction_items & ["beef", "fish"]).any?
-    else false
-    end
-  end
-
   def portions
     [cooked_portion, kibble_portion].reject(&:blank?)
   end
