@@ -57,25 +57,30 @@ class Api::V1::OnboardingController < ActionController::API
         name: "Tender Chicken",
         recipe: "chicken",
         image: nil,
-        description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken."
+        description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken.",
+        new: false
       },
       {
         name: "Savoury Beef",
         recipe: "beef",
         image: nil,
-        description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef."
+        description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef.",
+        new: false
       },
       {
         name: "Hearty Turkey",
         recipe: "turkey",
         image: nil,
-        description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free."
+        description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
+        new: false,
+
       },
       {
         name: "Luscious Lamb",
         recipe: "lamb",
         image: nil,
-        description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!"
+        description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!",
+        new: true
       }
     ]
 
@@ -84,19 +89,22 @@ class Api::V1::OnboardingController < ActionController::API
         name: "Chicken",
         recipe: "chicken",
         image: nil,
-        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+        new: false
       },
       {
         name: "Turkey & Salmon",
         recipe: "turkey+salmon",
         image: nil,
-        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+        new: false
       },
       {
         name: "Duck",
         recipe: "duck",
         image: nil,
-        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+        new: false
       }
     ]
 
