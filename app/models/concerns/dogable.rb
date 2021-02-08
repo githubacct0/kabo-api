@@ -168,4 +168,47 @@ module Dogable
   def topper_available
     !(weight_unit == "lbs" && weight <= 9) && !(weight_unit == "kg" && weight <= 4)
   end
+
+  # Get daily portions
+  def daily_portions
+    portions = []
+    if only_cooked_recipe
+      portions = [
+        {
+          title: "25% Kabo Diet",
+          description: "About 25% of #{name}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
+          cooked_portion: 25
+        },
+        {
+          title: "100% Kabo Diet",
+          description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}’s daily caloric needs, which is 1091 calories.",
+          cooked_portion: 100
+        }
+      ]
+    elsif mixed_cooked_and_kibble_recipe
+      portions = [
+        {
+          title: "25% cooked, 75% kibble",
+          cooked_portion: 25,
+          kibble_portion: 75
+        },
+        {
+          title: "50% cooked, 50% kibble",
+          cooked_portion: 50,
+          kibble_portion: 50
+        }
+      ]
+    elsif only_kibble_recipe
+      portions = [
+        {
+          title: "2 weeks worth",
+          description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
+          kibble_portion: 100,
+          plan_interval: 2
+        }
+      ]
+    end
+
+    portions
+  end
 end

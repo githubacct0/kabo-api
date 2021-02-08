@@ -123,17 +123,15 @@ class Api::V1::OnboardingController < ActionController::API
   # Get daily portions
   def portions
     if portions_params_valid?
-      dog = portions_params[:dog]
-      daily_portions = [
-        {
-          portion: 25,
-          description: "About 25% of #{dog}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!"
-        },
-        {
-          portion: 100,
-          description: "A complete and balanced diet for #{dog}. You will receive enough food for 100% of #{dog}’s daily caloric needs, which is 1091 calories."
-        }
-      ]
+      dog_ids = portions_params[:dog_ids].split(",")
+      daily_portions = {}
+      dog_ids.each do |dog_id|
+        temp_dog = TempDog.find_by(id: dog_id)
+        if temp_dog.present?
+          daily_portions[dog_id] = temp_dog.daily_portions
+        end
+      end
+
       render json: {
         daily_portions: daily_portions
       }, status: 200
@@ -184,7 +182,7 @@ class Api::V1::OnboardingController < ActionController::API
     end
 
     def portions_params
-      params.permit(:dog)
+      params.permit(:dog_ids)
     end
 
     def portions_params_valid?
