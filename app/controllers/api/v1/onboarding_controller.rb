@@ -58,28 +58,32 @@ class Api::V1::OnboardingController < ActionController::API
         recipe: "chicken",
         image: nil,
         description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken.",
-        new: false
+        new: false,
+        analysis: Constants::CHICKEN_ANALYSIS
       },
       {
         name: "Savoury Beef",
         recipe: "beef",
         image: nil,
         description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef.",
-        new: false
+        new: false,
+        analysis: Constants::BEEF_ANALYSIS
       },
       {
         name: "Hearty Turkey",
         recipe: "turkey",
         image: nil,
         description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
-        new: false
+        new: false,
+        analysis: Constants::TURKEY_ANALYSIS
       },
       {
         name: "Luscious Lamb",
         recipe: "lamb",
         image: nil,
         description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!",
-        new: true
+        new: true,
+        analysis: Constants::LAMB_ANALYSIS
       }
     ]
 
@@ -89,21 +93,24 @@ class Api::V1::OnboardingController < ActionController::API
         recipe: "chicken",
         image: nil,
         description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
-        new: false
+        new: false,
+        analysis: Constants::CHICKEN_KIBBLE_ANALYSIS
       },
       {
         name: "Turkey & Salmon",
         recipe: "turkey+salmon",
         image: nil,
         description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
-        new: false
+        new: false,
+        analysis: Constants::TURKEY_SALMON_KIBBLE_ANALYSIS
       },
       {
         name: "Duck",
         recipe: "duck",
         image: nil,
         description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
-        new: false
+        new: false,
+        analysis: Constants::DUCK_KIBBLE_ANALYSIS
       }
     ]
 
