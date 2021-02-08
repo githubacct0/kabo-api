@@ -56,22 +56,26 @@ class Api::V1::OnboardingController < ActionController::API
       {
         name: "Tender Chicken",
         recipe: "chicken",
-        image: ""
+        image: nil,
+        description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken."
       },
       {
         name: "Savoury Beef",
         recipe: "beef",
-        image: ""
+        image: nil,
+        description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef."
       },
       {
         name: "Hearty Turkey",
         recipe: "turkey",
-        image: ""
+        image: nil,
+        description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free."
       },
       {
         name: "Luscious Lamb",
         recipe: "lamb",
-        image: ""
+        image: nil,
+        description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!"
       }
     ]
 
@@ -79,17 +83,20 @@ class Api::V1::OnboardingController < ActionController::API
       {
         name: "Chicken",
         recipe: "chicken",
-        image: ""
+        image: nil,
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
       },
       {
         name: "Turkey & Salmon",
         recipe: "turkey+salmon",
-        image: ""
+        image: nil,
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
       },
       {
         name: "Duck",
         recipe: "duck",
-        image: ""
+        image: nil,
+        description: "Locally-sourced dry dog food, made with high quality ingredients you can trust."
       }
     ]
 
