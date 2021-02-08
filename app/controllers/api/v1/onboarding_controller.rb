@@ -38,7 +38,10 @@ class Api::V1::OnboardingController < ActionController::API
       }
 
       if step == "start"
-        render json: start_data, status: 200
+        promo_banner = {
+          text: "Surprise! We applied a 40% discount to your first order"
+        }
+        render json: { promo_banner: promo_banner }.merge(start_data), status: 200
       elsif step == "detail"
         render json: detail_data, status: 200
       else
