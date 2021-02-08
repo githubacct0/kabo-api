@@ -72,8 +72,7 @@ class Api::V1::OnboardingController < ActionController::API
         recipe: "turkey",
         image: nil,
         description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
-        new: false,
-
+        new: false
       },
       {
         name: "Luscious Lamb",
