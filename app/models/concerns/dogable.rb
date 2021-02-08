@@ -150,11 +150,11 @@ module Dogable
   end
 
   def mixed_cooked_and_kibble_recipe
-    kibble_recipe.present? && [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe].reject(&:blank?).size >= 1
+    kibble_recipe.present? && [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe].count(true) >= 1
   end
 
   def only_kibble_recipe
-    [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).empty?
+    [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].count(true) == 0
   end
 
   def reached_recipe_limit

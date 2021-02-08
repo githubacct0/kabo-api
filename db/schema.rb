@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_02_03_200823) do
+ActiveRecord::Schema.define(version: 2021_02_08_150816) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -144,6 +144,7 @@ ActiveRecord::Schema.define(version: 2021_02_03_200823) do
     t.integer "kibble_portion"
     t.datetime "created_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "updated_at", precision: 6, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.boolean "lamb_recipe", default: false
     t.index ["temp_user_id"], name: "index_temp_dogs_on_temp_user_id"
   end
 

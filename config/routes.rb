@@ -34,7 +34,8 @@ Rails.application.routes.draw do
       get "/onboarding/signup" => "onboarding#index"
       get "/onboarding/recipes" => "onboarding#recipes"
       get "/onboarding/portions" => "onboarding#portions"
-      post "/onboarding/temp_users" => "onboarding#create_temp_user"
+      post "/onboarding/users" => "onboarding#create"
+      put "/onboarding/users/:user_id" => "onboarding#update" 
     end
   end
 

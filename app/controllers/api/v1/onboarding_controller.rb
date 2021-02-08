@@ -139,19 +139,27 @@ class Api::V1::OnboardingController < ActionController::API
   end
 
   # Create temp user
-  def create_temp_user
-    step = onboarding_params[:step]
-    if step == "start"
-      temp_user = TempUser.create({ temp_dogs_attributes: onboarding_params[:dogs] })
+  def create
+    temp_user = TempUser.create({ temp_dogs_attributes: onboarding_params[:dogs] })
 
+    render json: {
+      status: true,
+      temp_user_id: temp_user.id,
+      temp_dog_ids: temp_user.temp_dog_ids
+    }, status: 200
+  end
+
+  # Update
+  def update
+    temp_user = TempUser.find(params[:user_id])
+    if temp_user.nil?
       render json: {
-        status: true,
-        temp_user_id: temp_user.id,
-        temp_dog_ids: temp_user.temp_dog_ids
-      }, status: 200
-    elsif step == "detail"
-      temp_user = TempUser.find(onboarding_params[:user_id])
-      if temp_user.present?
+        status: false,
+        err: "Temp User doesn't exist!"
+      }, status: 500
+    else
+      step = onboarding_params[:step]
+      if ["detail", "recipes"].include? step
         temp_user.update({ temp_dogs_attributes: onboarding_params[:dogs] })
 
         render json: {
@@ -159,11 +167,6 @@ class Api::V1::OnboardingController < ActionController::API
           temp_user_id: temp_user.id,
           temp_dog_ids: temp_user.temp_dog_ids
         }, status: 200
-      else
-        render json: {
-          status: false,
-          err: "Temp User doesn't exist!"
-        }, status: 500
       end
     end
   end
@@ -186,7 +189,9 @@ class Api::V1::OnboardingController < ActionController::API
       when "start"
         params.require(:onboarding).permit(:step, dogs: [:name, :breed, :age_in_months]).to_h
       when "detail"
-        params.require(:onboarding).permit(:step, :user_id, dogs: [:id, :gender, :neutered, :weight, :weight_unit, :body_type, :activity_level])
+        params.require(:onboarding).permit(:step, dogs: [:id, :gender, :neutered, :weight, :weight_unit, :body_type, :activity_level])
+      when "recipes"
+        params.require(:onboarding).permit(:step, dogs: [:id, :chicken_recipe, :beef_recipe, :turkey_recipe, :lamb_recipe, :kibble_recipe])
       end
     end
 end
