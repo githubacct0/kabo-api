@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class TempUser < ApplicationRecord
+  include Userable
+
   # Relations
   has_many :temp_dogs, inverse_of: :temp_user
   accepts_nested_attributes_for :temp_dogs, reject_if: :all_blank, allow_destroy: true

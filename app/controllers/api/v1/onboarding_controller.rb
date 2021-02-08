@@ -169,15 +169,89 @@ class Api::V1::OnboardingController < ActionController::API
       if ["detail", "recipes", "portions"].include?(step)
         update_params[:plan_interval] = onboarding_params[:plan_interval] if step == "portions"
         update_params[:temp_dogs_attributes] = onboarding_params[:dogs]
+        temp_user.update(update_params)
+
+        render json: {
+          status: true,
+          temp_user_id: temp_user.id,
+          temp_dog_ids: temp_user.temp_dog_ids
+        }, status: 200
+      elsif step == "account"
+        onboarding_params[:first_name].present? && update_params[:first_name] = onboarding_params[:first_name]
+        onboarding_params[:email].present? && update_params[:email] = onboarding_params[:email]
+        email = update_params[:email]
+        if email.present?
+          email_valid = TempUser.is_email_valid?(email)
+        else
+          email_valid = true
+          update_params[:email] = "#{SecureRandom.uuid}-temp-user@kabo.co"
+        end
+
+        if email_valid
+          checkout_token = SecureRandom.uuid
+          update_params[:checkout_token] = checkout_token
+          temp_user.update(update_params)
+
+          referral_code = onboarding_params[:referral_code]
+          referral_check = MyLib::Referral.check_code(referral_code)
+          applied_referral_code = referral_check ? "'#{referral_code}' used. #{referral_check} discount applied!" : "'40off' used. 40% discount applied!"
+
+          # TAG: CHECK IF NEED
+          if onboarding_params[:token].present?
+            agreement_response = MyLib::Paypal.create_billing_agreement
+
+            if Rack::Utils.parse_nested_query(agreement_response.body)["ACK"] == "Failure"
+              render json: {
+                status: false,
+                err: "Cancelled PayPal Authorization"
+              }, status: 500
+            else
+              details_response = MyLib::Paypal.get_express_checkout_details
+              paypal_checkout_details = Rack::Utils.parse_nested_query(details_response.body)
+              user = {
+                email: paypal_checkout_details["EMAIL"],
+                paypal_email: paypal_checkout_details["EMAIL"],
+                first_name: paypal_checkout_details["FIRSTNAME"],
+                shipping_last_name:  paypal_checkout_details["LASTNAME"],
+                shipping_street_address: paypal_checkout_details["SHIPTOSTREET"],
+                shipping_city: paypal_checkout_details["SHIPTOCITY"],
+                shipping_postal_code: paypal_checkout_details["SHIPTOZIP"].delete(" "),
+                reference_id: Rack::Utils.parse_nested_query(agreement_response.body)["BILLINGAGREEMENTID"]
+              }
+
+              temp_dogs = temp_user.dogs.map do |temp_dog|
+                {
+                  id: temp_dog.id,
+                  mean_plan: temp_dog.mean_plan,
+                  topper_available: temp_dog.topper_available,
+                  checkout_esimate: MyLib::Checkout.estimate_v2(temp_user, temp_dog, referral_code, referral_code, nil)
+                }
+              end
+
+              render json: {
+                status: true,
+                temp_user_id: temp_user.id,
+                temp_dogs: temp_dogs,
+                user: user,
+                applied_referral_code: applied_referral_code,
+                paypal_checkout: true,
+                checkout_token: checkout_token,
+              }, status: 200
+            end
+          else
+            render json: {
+              status: true,
+              temp_user_id: temp_user.id,
+              applied_referral_code: applied_referral_code
+            }, status: 200
+          end
+        else
+          render json: {
+            status: false,
+            err: "Email is invalid!"
+          }, status: 500
+        end
       end
-
-      temp_user.update(update_params)
-
-      render json: {
-        status: true,
-        temp_user_id: temp_user.id,
-        temp_dog_ids: temp_user.temp_dog_ids
-      }, status: 200
     end
   end
 
@@ -204,6 +278,8 @@ class Api::V1::OnboardingController < ActionController::API
         params.require(:onboarding).permit(:step, dogs: [:id, :chicken_recipe, :beef_recipe, :turkey_recipe, :lamb_recipe, :kibble_recipe])
       when "portions"
         params.require(:onboarding).permit(:step, :plan_interval, dogs: [:id, :cooked_portion, :kibble_portion])
+      when "account"
+        params.require(:onboarding).permit(:step, :first_name, :email, :referral_code, :token)
       end
     end
 end

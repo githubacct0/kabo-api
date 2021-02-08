@@ -166,7 +166,7 @@ module Dogable
   end
 
   def topper_available
-    !(weight_unit == "lbs" && weight <= 9) && !(weight_unit == "kg" && weight <= 4)
+    (weight_unit == "lbs" && weight > 9) || (weight_unit == "kg" && weight > 4)
   end
 
   # Get daily portions
