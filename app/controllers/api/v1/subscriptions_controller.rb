@@ -43,16 +43,16 @@ class Api::V1::SubscriptionsController < ApplicationController
       begin
         if ["paused", "cancelled"].include? dog_subscription.status
           if dog_subscription.status == "paused"
-            result = ChargebeeHelper.unpause_subscription(@user, dog)
+            result = MyLib::Chargebee.unpause_subscription(@user, dog)
           else
-            result = ChargebeeHelper.reactivate_subscription(@user, dog)
+            result = MyLib::Chargebee.reactivate_subscription(@user, dog)
           end
 
-          subscription_start_date = IceCubeHelper.subscription_start_date
+          subscription_start_date = MyLib::Icecube.subscription_start_date
 
           default_delivery_date = subscription_start_date + 7.days
           if !result.subscription.shipping_address.zip.nil?
-            default_delivery_date = subscription_start_date + AccountHelper.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip)
+            default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip)
           end
 
           UserMailer.with(
