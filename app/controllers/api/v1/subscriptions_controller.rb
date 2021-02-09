@@ -148,6 +148,16 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
   end
 
+  # Route: /api/v1/user/subscriptions/meal_plans
+  # Method: GET
+  # Get meal plans
+  def meal_plans
+    render json: {
+      cooked_recipes: MyLib::Account.cooked_recipes,
+      kibble_recipes: MyLib::Account.kibble_recipes
+    }, status: 200
+  end
+
   private
     def pause_subscriptions_params
       params.permit(:dog_id, :pause_until)
