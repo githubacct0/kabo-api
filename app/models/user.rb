@@ -5,6 +5,8 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable and :omniauthable, :rememberable, :registerable
   devise :database_authenticatable, :recoverable, :validatable, :trackable
 
+  include Userable
+
   # Relations
   has_many :dogs, dependent: :destroy
   accepts_nested_attributes_for :dogs
@@ -63,18 +65,6 @@ class User < ApplicationRecord
     Digest::SHA1.hexdigest(email)
   end
 
-  def plan_unit_fee_limit
-    created_at > DateTime.parse("June 11, 2020 at 11pm EDT") ? 56 : 40
-  end
-
-  def unit_price(sku)
-    if created_at < DateTime.parse("Aug 25, 2020 at 10pm EDT") # Date of deploy, updating to 0.60/oz
-      sku.include?("lamb") ? 75 : 50
-    else
-      sku.include?("lamb") ? 75 : 60
-    end
-  end
-
   def delivery_address_edit_disabled
     schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) do |s|
       s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
@@ -114,13 +104,6 @@ class User < ApplicationRecord
       split ? ["#{plan_split[0]} weeks of food", "every #{plan_split[0]} weeks"] : "#{plan_split[0]} weeks of food every #{plan_split[0]} weeks"
     elsif plan_split[3] == "week-delay"
       split ? ["#{plan_split[0]} weeks of food", "every #{plan_split[2]} weeks"] : "#{plan_split[0]} weeks of food every #{plan_split[2]} weeks"
-    end
-  end
-
-  def how_often
-    plan_split = chargebee_plan_interval.split("_")
-    if plan_split.size == 2 then "#{plan_split[0]}_week-delay"
-    elsif plan_split[3] == "week-delay" then "#{plan_split[2]}_week-delay"
     end
   end
 

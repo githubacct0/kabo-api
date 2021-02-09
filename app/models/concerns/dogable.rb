@@ -7,15 +7,75 @@ module Dogable
     belongs_to :main_breed, class_name: "Breed", optional: true
     belongs_to :secondary_breed, class_name: "Breed", optional: true
 
-    # Valdation
-    validates_inclusion_of :neutered, in: [true, false]
-    validates_inclusion_of :gender, in: [Constants::FEMALE, Constants::MALE]
-    validates_inclusion_of :weight_unit, in: [Constants::LBS, Constants::KG]
-    # validates_inclusion_of :meal_type, :in => Constants::MEAL_TYPES
-    validates_inclusion_of :age_in_months, in: 0..240
-
     enum gender: [ :female, :male ]
     enum weight_unit: [ :lbs, :kg ]
+  end
+
+  def get_chargebee_plan_interval
+    self.class.name == "Dog" ? user.chargebee_plan_interval : temp_user.chargebee_plan_interval
+  end
+
+  def plan_units_v2(total_units = false, bypass_adjustment = false, adjustment_direction = nil)
+    total_recipes = [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).size
+
+    if !bypass_adjustment && adjustment_direction.nil?
+      meal_percentage = cooked_portion / 100.0
+    else
+      meal_percentage = 100 / 100.0
+    end
+    calories_for_meal_per_day = meal_percentage * calories_required
+
+    ounces_for_meal_per_day = (calories_for_meal_per_day / 43)
+
+    interval = get_chargebee_plan_interval
+
+    ounces_for_meal_during_plan_interval = ounces_for_meal_per_day*14 # for 2 weeks
+
+    if interval.include?("4_weeks")
+      ounces_for_meal_during_plan_interval = ounces_for_meal_during_plan_interval * 2
+    end
+
+    if adjustment_direction && adjustment_direction == "higher" && !bypass_adjustment || portion_adjustment.present? && !bypass_adjustment
+      plan_daily_serving_rounded = daily_serving(ounces_for_meal_during_plan_interval.floor)
+      plan_daily_serving_decimal = daily_serving(ounces_for_meal_during_plan_interval.floor, true)
+      plan_daily_serving_difference = plan_daily_serving_decimal-plan_daily_serving_rounded
+      plan_daily_serving_higher_decimal = adjusted_daily_serving(plan_daily_serving_rounded, "higher") + plan_daily_serving_difference
+
+      if total_units
+        return (plan_daily_serving_higher_decimal * (interval[0].to_i * 7)).floor
+      else
+        return ((plan_daily_serving_higher_decimal * (interval[0].to_i * 7)) / total_recipes).floor
+      end
+    end
+
+    total_units ? (ounces_for_meal_during_plan_interval).floor : (ounces_for_meal_during_plan_interval/total_recipes).floor
+  end
+
+  def kibble_quantity_v2
+    meal_percentage = kibble_portion/100.0
+    calories_for_meal_per_day = meal_percentage * calories_required
+
+    # 3300 kcal/kg, chicken, 3300/2.205 = 1497 kcal/lbs, 7485 per 5lbs
+    # 3440 kcal/kg, turkey+salmon, 3440/2.205 = 1560 kcal/lbs, 7800 per 5lbs
+    # 3570 kcal/kg, duck, 3570/2.205 = 1619 kcal/lbs, 8095 per 5lbs
+
+    if kibble_recipe == "chicken"
+      bags_for_meal_per_day = (calories_for_meal_per_day / 7485) # can be a fraction of a bag
+    elsif kibble_recipe == "turkey+salmon"
+      bags_for_meal_per_day = (calories_for_meal_per_day / 7800) # can be a fraction of a bag
+    elsif kibble_recipe == "duck"
+      bags_for_meal_per_day = (calories_for_meal_per_day / 8095) # can be a fraction of a bag
+    end
+
+    interval = get_chargebee_plan_interval
+
+    ounces_for_meal_during_plan_interval = bags_for_meal_per_day*14 # for 2 weeks
+
+    if interval.include?("4_weeks")
+      ounces_for_meal_during_plan_interval = ounces_for_meal_during_plan_interval*2
+    end
+
+    ounces_for_meal_during_plan_interval.ceil # rounded up to the next amount of bags
   end
 
   def readable_meal_type
@@ -117,8 +177,11 @@ module Dogable
     end
   end
 
-  def topper_available
-    !(weight_unit == "lbs" && weight <= 9) && !(weight_unit == "kg" && weight <= 4)
+  def has_food_restriction
+    if food_restriction_items.any? && food_restriction
+      (food_restriction_items & ["beef", "fish"]).any?
+    else false
+    end
   end
 
   def has_possible_food_restriction # TODO: Update for multiple recipes if adding food restriction question back to signup
@@ -154,11 +217,11 @@ module Dogable
   end
 
   def mixed_cooked_and_kibble_recipe
-    kibble_recipe.present? && [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe].reject(&:blank?).size >= 1
+    kibble_recipe.present? && [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe].count(true) >= 1
   end
 
   def only_kibble_recipe
-    [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).empty?
+    [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].count(true) == 0
   end
 
   def reached_recipe_limit
@@ -167,5 +230,52 @@ module Dogable
 
   def recipes
     [beef_recipe, chicken_recipe, lamb_recipe, turkey_recipe, kibble_recipe].reject(&:blank?)
+  end
+
+  def topper_available
+    (weight_unit == "lbs" && weight > 9) || (weight_unit == "kg" && weight > 4)
+  end
+
+  # Get daily portions
+  def daily_portions
+    portions = []
+    if only_cooked_recipe
+      portions = [
+        {
+          title: "25% Kabo Diet",
+          description: "About 25% of #{name}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
+          cooked_portion: 25
+        },
+        {
+          title: "100% Kabo Diet",
+          description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}’s daily caloric needs, which is 1091 calories.",
+          cooked_portion: 100
+        }
+      ]
+    elsif mixed_cooked_and_kibble_recipe
+      portions = [
+        {
+          title: "25% cooked, 75% kibble",
+          cooked_portion: 25,
+          kibble_portion: 75
+        },
+        {
+          title: "50% cooked, 50% kibble",
+          cooked_portion: 50,
+          kibble_portion: 50
+        }
+      ]
+    elsif only_kibble_recipe
+      portions = [
+        {
+          title: "2 weeks worth",
+          description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
+          kibble_portion: 100,
+          plan_interval: 2
+        }
+      ]
+    end
+
+    portions
   end
 end

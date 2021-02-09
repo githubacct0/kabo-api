@@ -3,50 +3,46 @@
 module MyLib
   class Checkout
     class << self
-      def estimate_v2(user, dog, original_referral_code = nil, referral_code_from_cookie = nil, postal_code = nil)
+      def estimate_v2(user, dog, original_referral_code = nil, saved_referral_code = nil, postal_code = nil, is_temp_user = false)
+        dogs = is_temp_user ? user.temp_dogs : user.dogs
+        user_chargebee_plan_interval = user.chargebee_plan_interval
+        is_temp_user = is_temp_user || !user.verified
         referral_code_check = MyLib::Referral.check_code(original_referral_code)
         request_referral_code_check = referral_code_check
 
-        referral_code_from_cookie_check = MyLib::Referral.check_code(referral_code_from_cookie)
+        saved_referral_code_check = MyLib::Referral.check_code(saved_referral_code)
 
-        if !referral_code_check && referral_code_from_cookie_check && !referral_code_from_cookie.blank?
-          referral_code = referral_code_from_cookie
-          referral_code_check = referral_code_from_cookie_check
+        if !referral_code_check && saved_referral_code_check && saved_referral_code.present?
+          referral_code = saved_referral_code
+          referral_code_check = saved_referral_code_check
         else
           referral_code = original_referral_code
-          referral_code_check = referral_code_check
         end
 
-        if referral_code.blank? && !referral_code_check
+        if referral_code.nil? && !referral_code_check
           referral_code = "40off"
           referral_code_check = "40%"
         end
 
         referral_codes = []
-        referral_codes.push(referral_code) if !user.verified || !original_referral_code.blank? && referral_code_check
+        referral_codes.push(referral_code) if is_temp_user || original_referral_code.present? && referral_code_check
 
-        if user.dogs.map { |d| d.turkey_recipe }.include?(true) || user.dogs.map { |d| ["turkey+salmon", "duck"].include?(d.kibble_recipe) }.include?(true)
+        if dogs.map { |d| d.turkey_recipe }.include?(true) || dogs.map { |d| ["turkey+salmon", "duck"].include?(d.kibble_recipe) }.include?(true)
           # Delay cycle for new recipes
-          schedule = IceCube::Schedule.new(Time.zone.parse("2020-11-20 12:00:00")) do |s|
-            s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-          end
+          start_date = "2020-11-20 12:00:00"
         else
-          schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) do |s|
-            s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-          end
+          start_date = "2020-01-03 12:00:00"
         end
-        subscription_start_date = schedule.next_occurrence.utc.to_i
+        subscription_start_date = MyLib::Icecube.subscription_start_date(start_date)
 
         subscription_params = {
-          plan_id: user.chargebee_plan_interval,
-          # plan_quantity: dog.plan_units,
-          # plan_unit_price: user.unit_price(dog.meal_type + "_" + user.chargebee_plan_interval),
+          plan_id: user_chargebee_plan_interval,
           start_date: subscription_start_date
         }
 
         address_for_taxes = {}
 
-        if !postal_code.nil?
+        if postal_code.present?
           address_for_taxes = {
             state_code: get_province_from_postal_code(postal_code), # In format of ON, BC, etc.
             country: "CA"
@@ -56,7 +52,7 @@ module MyLib
         subscription_addons = []
 
         # For smaller dogs fee
-        if user.dogs.where.not(meal_type: "food_restriction").count == 1 && dog.plan_units < user.plan_unit_fee_limit
+        if dogs.where.not(meal_type: "food_restriction").count == 1 && dog.plan_units < user.plan_unit_fee_limit
           subscription_addons.push(
             {
               id: "delivery-service-fee-#{user.how_often.split("_")[0]}-weeks"
@@ -65,25 +61,25 @@ module MyLib
         end
 
         subscription_addons.push({
-          id: "beef_#{user.chargebee_plan_interval}",
+          id: "beef_#{user_chargebee_plan_interval}",
           quantity: dog.plan_units_v2,
-          unit_price: user.unit_price("beef_#{user.chargebee_plan_interval}")
+          unit_price: user.unit_price("beef_#{user_chargebee_plan_interval}")
         }) if dog.beef_recipe
 
         subscription_addons.push({
-          id: "chicken_#{user.chargebee_plan_interval}",
+          id: "chicken_#{user_chargebee_plan_interval}",
           quantity: dog.plan_units_v2,
-          unit_price: user.unit_price("chicken_#{user.chargebee_plan_interval}")
+          unit_price: user.unit_price("chicken_#{user_chargebee_plan_interval}")
         }) if dog.chicken_recipe
 
         subscription_addons.push({
-          id: "turkey_#{user.chargebee_plan_interval}",
+          id: "turkey_#{user_chargebee_plan_interval}",
           quantity: dog.plan_units_v2,
-          unit_price: user.unit_price("turkey_#{user.chargebee_plan_interval}")
+          unit_price: user.unit_price("turkey_#{user_chargebee_plan_interval}")
         }) if dog.turkey_recipe
 
         subscription_addons.push({
-          id: "#{dog.kibble_recipe}_kibble_#{user.chargebee_plan_interval}",
+          id: "#{dog.kibble_recipe}_kibble_#{user_chargebee_plan_interval}",
           quantity: dog.kibble_quantity_v2
         }) if !dog.kibble_recipe.blank?
 
@@ -93,43 +89,38 @@ module MyLib
           billing_address: address_for_taxes,
           addons: subscription_addons
         })
-        @invoice_estimate = result.estimate.next_invoice_estimate
+        invoice_estimate = result.estimate.next_invoice_estimate
 
-        if user.dogs.count > 1 && !user.verified
+        if dogs.count > 1 && is_temp_user
           total_price_estimate = 0
-          user.dogs.each do |multiple_dog|
+          dogs.each do |multiple_dog|
             multiple_subscription_params = {
-              plan_id: user.chargebee_plan_interval,
+              plan_id: user_chargebee_plan_interval,
               start_date: subscription_start_date
             }
-
-            # multiple_default_address = {
-            #   :state_code => "ON",
-            #   :country => 'CA'
-            # }
 
             multiple_dog_subscription_addons = []
 
             multiple_dog_subscription_addons.push({
-              id: "beef_#{user.chargebee_plan_interval}",
+              id: "beef_#{user_chargebee_plan_interval}",
               quantity: multiple_dog.plan_units_v2,
-              unit_price: user.unit_price("beef_#{user.chargebee_plan_interval}")
+              unit_price: user.unit_price("beef_#{user_chargebee_plan_interval}")
             }) if multiple_dog.beef_recipe
 
             multiple_dog_subscription_addons.push({
-              id: "chicken_#{user.chargebee_plan_interval}",
+              id: "chicken_#{user_chargebee_plan_interval}",
               quantity: multiple_dog.plan_units_v2,
-              unit_price: user.unit_price("chicken_#{user.chargebee_plan_interval}")
+              unit_price: user.unit_price("chicken_#{user_chargebee_plan_interval}")
             }) if multiple_dog.chicken_recipe
 
             multiple_dog_subscription_addons.push({
-              id: "turkey_#{user.chargebee_plan_interval}",
+              id: "turkey_#{user_chargebee_plan_interval}",
               quantity: multiple_dog.plan_units_v2,
-              unit_price: user.unit_price("turkey_#{user.chargebee_plan_interval}")
+              unit_price: user.unit_price("turkey_#{user_chargebee_plan_interval}")
             }) if multiple_dog.turkey_recipe
 
             multiple_dog_subscription_addons.push({
-              id: "#{multiple_dog.kibble_recipe}_kibble_#{user.chargebee_plan_interval}",
+              id: "#{multiple_dog.kibble_recipe}_kibble_#{user_chargebee_plan_interval}",
               quantity: multiple_dog.kibble_quantity_v2
             }) if !multiple_dog.kibble_recipe.blank?
 
@@ -143,110 +134,85 @@ module MyLib
             total_price_estimate += total_invoice_estimate.total
           end
         else
-          total_price_estimate = @invoice_estimate.total
+          total_price_estimate = invoice_estimate.total
         end
 
         purchase_by_date = (Time.now + 2.days).strftime("%b %e, %Y")
-        if Time.now + 2.days > (Time.zone.at(subscription_start_date))
-          purchase_by_date = Time.zone.at(subscription_start_date).strftime("%b %e, %Y")
-        end
+        purchase_by_date = Time.zone.at(subscription_start_date).strftime("%b %e, %Y") if Time.now + 2.days > Time.zone.at(subscription_start_date)
 
         default_delivery_date = subscription_start_date + 7.days
-        if !postal_code.nil?
+        if postal_code.present?
           default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(postal_code)
 
           # Manual override for AB/BC orders (Nov 11)
-          if ["AB", "BC"].include?(get_province_from_postal_code(postal_code))
-            default_delivery_date = subscription_start_date + 4.days
-          end
+          default_delivery_date = subscription_start_date + 4.days if ["AB", "BC"].include?(get_province_from_postal_code(postal_code))
         end
 
         productReturn = {
           topperAvailable: dog.topper_available,
           productDescription: [
-            "<span class='checkout-delivery-date' style='font-weight: 400;'>Arrives #{Time.zone.at(default_delivery_date).strftime("%b %e, %Y")} if you purchase by #{purchase_by_date}</span>",
-            "<span class='checkout-delivery-date-value' style='display: none;'>#{Time.zone.at(default_delivery_date).utc.strftime("%d/%m/%y")}</span>"
+            "Arrives #{Time.zone.at(default_delivery_date).strftime("%b %e, %Y")} if you purchase by #{purchase_by_date}",
+            "#{Time.zone.at(default_delivery_date).utc.strftime("%d/%m/%y")}"
           ],
           priceDetails: [
             { title: "Shipping", details: "FREE!", margin_bottom: 2 },
-            { title: "Tax #{ "(" + @invoice_estimate.taxes.map { |t| t.name }.join(' & ') + ")" if !@invoice_estimate.taxes.empty?}", details: (@invoice_estimate.taxes.empty? ? "--" : Money.new(@invoice_estimate.taxes.reduce(0) { |sum, tax| sum + tax.amount }).format), margin_bottom: 2 }
+            { title: "Tax #{ "(" + invoice_estimate.taxes.map { |t| t.name }.join(' & ') + ")" if invoice_estimate.taxes.any?}", details: (invoice_estimate.taxes.empty? ? "--" : Money.new(invoice_estimate.taxes.reduce(0) { |sum, tax| sum + tax.amount }).format), margin_bottom: 2 }
           ],
           priceTotal: { title: "Total Due", details: Money.new(total_price_estimate).format },
           referral: request_referral_code_check ? "'#{referral_code}' used. #{referral_code_check} discount applied!" : "Sorry, your coupon code is invalid",
           mealplanInfo: []
         }
 
-        if dog.readable_cooked_recipes
-          productReturn[:mealplanInfo].push("Freshly Cooked: #{dog.readable_cooked_recipes}")
-        end
-
-        if dog.readable_kibble_recipe
-          productReturn[:mealplanInfo].push("Fresh Kibble: #{dog.readable_kibble_recipe}")
-        end
-
-        if dog.readable_portion_v2
-          productReturn[:mealplanInfo].push("Portion: #{dog.readable_portion_v2}")
-        end
-
-        productReturn[:mealplanInfo].push("Amount: #{user.chargebee_plan_interval[0]} weeks worth of food")
+        productReturn[:mealplanInfo].push("Freshly Cooked: #{dog.readable_cooked_recipes}") if dog.readable_cooked_recipes
+        productReturn[:mealplanInfo].push("Fresh Kibble: #{dog.readable_kibble_recipe}") if dog.readable_kibble_recipe
+        productReturn[:mealplanInfo].push("Portion: #{dog.readable_portion_v2}")  if dog.readable_portion_v2
+        productReturn[:mealplanInfo].push("Amount: #{user_chargebee_plan_interval[0]} weeks worth of food")
 
         productReturn[:priceDetails].insert(0, {
           title: "First order discount (#{referral_code_check})",
-          details: "-" + Money.new(@invoice_estimate.discounts[0].amount).format,
+          details: "-" + Money.new(invoice_estimate.discounts[0].amount).format,
           margin_bottom: 2
-        }) if !user.verified
+        }) if is_temp_user
 
         productReturn[:priceDetails].insert(0, {
           title: "Order discount (#{referral_code_check})",
-          details: "-" + Money.new(@invoice_estimate.discounts[0].amount).format,
+          details: "-" + Money.new(invoice_estimate.discounts[0].amount).format,
           margin_bottom: 2
-        }) if user.verified && !referral_codes.blank?
+        }) if !is_temp_user && referral_codes.any?
 
         productReturn[:priceDetails].insert(0, {
           title: "Fresh #{dog.kibble_recipe.sub("+", " & ")} kibble",
-          details: "#{Money.new(@invoice_estimate.line_items.select { |li| li.entity_id == "#{dog.kibble_recipe}_kibble_#{user.chargebee_plan_interval}" }[0].amount).format}",
+          details: "#{Money.new(invoice_estimate.line_items.select { |li| li.entity_id == "#{dog.kibble_recipe}_kibble_#{user_chargebee_plan_interval}" }[0].amount).format}",
           margin_bottom: 6
-        }) if !dog.kibble_recipe.blank?
+        }) if dog.kibble_recipe.present?
 
         productReturn[:priceDetails].insert(0, {
           title: "Hearty Turkey",
-          details: "#{Money.new(@invoice_estimate.line_items.select { |li| li.entity_id == "turkey_#{user.chargebee_plan_interval}" }[0].amount).format}",
+          details: "#{Money.new(invoice_estimate.line_items.select { |li| li.entity_id == "turkey_#{user_chargebee_plan_interval}" }[0].amount).format}",
           margin_bottom: 6
         }) if dog.turkey_recipe
 
         productReturn[:priceDetails].insert(0, {
           title: "Savoury Beef",
-          details: "#{Money.new(@invoice_estimate.line_items.select { |li| li.entity_id == "beef_#{user.chargebee_plan_interval}" }[0].amount).format}",
+          details: "#{Money.new(invoice_estimate.line_items.select { |li| li.entity_id == "beef_#{user_chargebee_plan_interval}" }[0].amount).format}",
           margin_bottom: 6
         }) if dog.beef_recipe
 
         productReturn[:priceDetails].insert(0, {
           title: "Tender Chicken",
-          details: "#{Money.new(@invoice_estimate.line_items.select { |li| li.entity_id == "chicken_#{user.chargebee_plan_interval}" }[0].amount).format}",
+          details: "#{Money.new(invoice_estimate.line_items.select { |li| li.entity_id == "chicken_#{user_chargebee_plan_interval}" }[0].amount).format}",
           margin_bottom: 6
         }) if dog.chicken_recipe
 
-        # productReturn[:priceDetails].insert(1, {
-        #   title: "#{kibble_line_item.quantity} #{'bag'.pluralize(kibble_line_item.quantity)} of fresh chicken kibble (75% portion)",
-        #   details: Money.new(kibble_line_item.amount).format,
-        #   removable: true,
-        #   margin_bottom: 6
-        # }) if !dog.kibble_type.blank?
-
-        # productReturn[:priceDetails].insert(1, {
-        #   title: "Add fresh chicken kibble (75% portion)",
-        #   addable: true,
-        #   margin_bottom: 6
-        # }) if dog.kibble_type.blank?#  && dog.meal_type.split('_')[0] == "25"
-
         productReturn[:priceDetails].push({
           title: "<span style='font-weight:700;'>#{dog.name}'s Total</span>",
-          details: "<span style='font-weight:700;'>#{Money.new(@invoice_estimate.total).format}</span>"
-        }) if user.dogs.where.not(meal_type: "food_restriction").count > 1
+          details: "<span style='font-weight:700;'>#{Money.new(invoice_estimate.total).format}</span>"
+        }) if dogs.where.not(meal_type: "food_restriction").count > 1
 
         productReturn
       end
 
+      # TAG: DO NOT USE
       def estimate(user, dog, referral_code = "40off", referral_code_from_cookie = nil, postal_code = nil)
         referral_code_check = MyLib::Referral.check_code(referral_code)
 
