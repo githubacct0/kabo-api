@@ -11,10 +11,6 @@ module Dogable
     enum weight_unit: [ :lbs, :kg ]
   end
 
-  def get_chargebee_plan_interval
-    self.class.name == "Dog" ? user.chargebee_plan_interval : temp_user.chargebee_plan_interval
-  end
-
   def plan_units_v2(total_units = false, bypass_adjustment = false, adjustment_direction = nil)
     total_recipes = [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).size
 
@@ -27,7 +23,7 @@ module Dogable
 
     ounces_for_meal_per_day = (calories_for_meal_per_day / 43)
 
-    interval = get_chargebee_plan_interval
+    interval = user.chargebee_plan_interval
 
     ounces_for_meal_during_plan_interval = ounces_for_meal_per_day*14 # for 2 weeks
 
@@ -67,7 +63,7 @@ module Dogable
       bags_for_meal_per_day = (calories_for_meal_per_day / 8095) # can be a fraction of a bag
     end
 
-    interval = get_chargebee_plan_interval
+    interval = user.chargebee_plan_interval
 
     ounces_for_meal_during_plan_interval = bags_for_meal_per_day*14 # for 2 weeks
 
@@ -248,5 +244,74 @@ module Dogable
     end
 
     portions
+  end
+
+  # Get price estimate
+  def price_estimate(meal_params = {})
+    temp_dog_attr = self.dup.attributes
+    temp_dog_attr.merge!(meal_params)
+    temp_dog_attr[:created_at] = user.created_at
+
+    temp_dog = Dog.new(temp_dog_attr)
+
+    subscription_param_addons = []
+
+    subscription_param_addons.push({
+      id: "beef_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("beef_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.beef_recipe
+
+    subscription_param_addons.push({
+      id: "chicken_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("chicken_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.chicken_recipe
+
+    subscription_param_addons.push({
+      id: "turkey_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("turkey_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.turkey_recipe
+
+    subscription_param_addons.push({
+      id: "lamb_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("lamb_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.lamb_recipe
+
+    subscription_param_addons.push({
+      id: "#{temp_dog.kibble_recipe}_kibble_#{user.chargebee_plan_interval}",
+      quantity: temp_dog.kibble_quantity_v2
+    }) if temp_dog.kibble_recipe.present?
+
+    # Include service fee
+    if user.dogs.size == 1 && temp_dog.only_cooked_recipe && temp_dog.plan_units_v2(true) < user.plan_unit_fee_limit && user.created_at < DateTime.parse("November 5, 2020 at 7:40am EDT")
+      subscription_param_addons.push(
+        {
+          id: "delivery-service-fee-#{user.how_often.split("_")[0]}-weeks"
+        }
+      )
+    end
+
+    result = ChargeBee::Estimate.update_subscription({
+      subscription: {
+        id: chargebee_subscription_id,
+        plan_id: user.chargebee_plan_interval,
+        use_existing_balances: false
+      },
+      addons: subscription_param_addons,
+      replace_addon_list: true
+    })
+
+    invoice_estimate = result.estimate.next_invoice_estimate
+
+    if !temp_dog.beef_recipe && !temp_dog.chicken_recipe && !temp_dog.turkey_recipe && !temp_dog.lamb_recipe && temp_dog.kibble_recipe.blank?
+      "--"
+    else
+      "#{Money.new(invoice_estimate.total).format}"
+    end
+  rescue StandardError => e
+    puts "Error: #{e.message}"
   end
 end

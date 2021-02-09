@@ -5,6 +5,7 @@ class TempDog < ApplicationRecord
 
   # Relations
   belongs_to :temp_user
+  belongs_to :user, class_name: "TempUser", foreign_key: "temp_user_id"
 
   serialize :food_restriction_items, JSON
 

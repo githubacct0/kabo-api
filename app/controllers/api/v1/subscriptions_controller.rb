@@ -181,6 +181,17 @@ class Api::V1::SubscriptionsController < ApplicationController
     }, status: 200
   end
 
+  # Route: /api/v1/user/subscriptions/meal_plan/estimate
+  # Method: GET
+  # Get estimate of meal plans
+  def estimate_meal_plan
+    dog = Dog.find_by(id: estimate_meal_plan_params[:dog_id])
+
+    price_estimate = dog.price_estimate(estimate_meal_plan_params.except(:dog_id))
+
+    render json: { amount: price_estimate }
+  end
+
   private
     def pause_subscriptions_params
       params.permit(:dog_id, :pause_until)
@@ -230,5 +241,19 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     def daily_portions_params
       params.permit(:dog_name, :kibble_recipe, cooked_recipes: [])
+    end
+
+    def estimate_meal_plan_params
+      params.permit(
+        :dog_id,
+        :chicken_recipe,
+        :beef_recipe,
+        :turkey_recipe,
+        :lamb_recipe,
+        :kibble_recipe,
+        :cooked_portion,
+        :kibble_portion,
+        :portion_adjustment
+      )
     end
 end
