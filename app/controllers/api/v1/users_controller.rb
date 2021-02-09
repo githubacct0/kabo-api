@@ -39,7 +39,7 @@ class Api::V1::UsersController < ApplicationController
         invoice_estimate_total: invoice_estimate_total,
         invoice_estimate_description: invoice_estimate_description,
         shipping_province: subscription.shipping_address.state_code,
-        addons: subscription.addons.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
+        addons: subscription.addons&.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
       }
       card = chargebee_subscription.card
       shipping_address = subscription&.shipping_address
