@@ -240,40 +240,11 @@ module Dogable
   def daily_portions
     portions = []
     if only_cooked_recipe
-      portions = [
-        {
-          title: "25% Kabo Diet",
-          description: "About 25% of #{name}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
-          cooked_portion: 25
-        },
-        {
-          title: "100% Kabo Diet",
-          description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}’s daily caloric needs, which is 1091 calories.",
-          cooked_portion: 100
-        }
-      ]
+      portions = MyLib::Account.only_cooked_recipe_daily_portions(name: name)
     elsif mixed_cooked_and_kibble_recipe
-      portions = [
-        {
-          title: "25% cooked, 75% kibble",
-          cooked_portion: 25,
-          kibble_portion: 75
-        },
-        {
-          title: "50% cooked, 50% kibble",
-          cooked_portion: 50,
-          kibble_portion: 50
-        }
-      ]
+      portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
     elsif only_kibble_recipe
-      portions = [
-        {
-          title: "2 weeks worth",
-          description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
-          kibble_portion: 100,
-          plan_interval: 2
-        }
-      ]
+      portions = MyLib::Account.only_kibble_recipe_daily_portions(name: name)
     end
 
     portions
