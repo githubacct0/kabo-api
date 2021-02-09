@@ -190,6 +190,7 @@ class Api::V1::OnboardingController < ActionController::API
         if email_valid
           checkout_token = SecureRandom.uuid
           update_params[:checkout_token] = checkout_token
+          update_params[:chargebee_plan_interval] = "#{temp_user.calculated_trial_length}_weeks"
           temp_user.update(update_params)
 
           referral_code = onboarding_params[:referral_code]
@@ -239,10 +240,19 @@ class Api::V1::OnboardingController < ActionController::API
               }, status: 200
             end
           else
+            temp_dogs = temp_user.temp_dogs.map { |temp_dog|
+              {
+                name: temp_dog.name,
+                meal_type: temp_dog.meal_type,
+                checkout_estimate: MyLib::Checkout.estimate_v2(temp_user, temp_dog, referral_code, nil, nil, true)
+              }
+            }
+
             render json: {
               status: true,
               temp_user_id: temp_user.id,
-              applied_referral_code: applied_referral_code
+              applied_referral_code: applied_referral_code,
+              temp_dogs: temp_dogs
             }, status: 200
           end
         else
