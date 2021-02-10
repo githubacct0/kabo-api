@@ -43,16 +43,16 @@ class Api::V1::SubscriptionsController < ApplicationController
       begin
         if ["paused", "cancelled"].include? dog_subscription.status
           if dog_subscription.status == "paused"
-            result = ChargebeeHelper.unpause_subscription(@user, dog)
+            result = MyLib::Chargebee.unpause_subscription(@user, dog)
           else
-            result = ChargebeeHelper.reactivate_subscription(@user, dog)
+            result = MyLib::Chargebee.reactivate_subscription(@user, dog)
           end
 
-          subscription_start_date = IceCubeHelper.subscription_start_date
+          subscription_start_date = MyLib::Icecube.subscription_start_date
 
           default_delivery_date = subscription_start_date + 7.days
           if !result.subscription.shipping_address.zip.nil?
-            default_delivery_date = subscription_start_date + AccountHelper.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip)
+            default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip)
           end
 
           UserMailer.with(
@@ -64,7 +64,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
           SlackWorker.perform_async(
             hook_url: Rails.configuration.slack_webhooks[:accountpage],
-            text: "#{ ('[' + ENV['HEROKU_APP_NAME'] + '] ') if ENV['HEROKU_APP_NAME'] != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
             icon_emoji: ":arrow_forward:"
           )
 
@@ -148,6 +148,103 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
   end
 
+  # Route: /api/v1/user/subscriptions/meal_plans
+  # Method: GET
+  # Get meal plans
+  def meal_plans
+    render json: {
+      cooked_recipes: MyLib::Account.cooked_recipes,
+      kibble_recipes: MyLib::Account.kibble_recipes
+    }, status: 200
+  end
+
+  # Route: /api/v1/user/subscriptions/portions
+  # Method: GET
+  # Get daily portions
+  def daily_portions
+    portions = []
+    cooked_recipes = daily_portions_params[:cooked_recipes]
+    kibble_recipe = daily_portions_params[:kibble_recipe]
+    dog_name = daily_portions_params[:dog_name]
+    if kibble_recipe.present?
+      if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
+        portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
+      else
+        portions = MyLib::Account.only_kibble_recipe_daily_portions(name: dog_name)
+      end
+    else
+      portions = MyLib::Account.only_cooked_recipe_daily_portions(name: dog_name)
+    end
+
+    render json: {
+      portions: portions
+    }, status: 200
+  end
+
+  # Route: /api/v1/user/subscriptions/meal_plan/estimate
+  # Method: POST
+  # Get estimate of meal plans
+  def estimate_meal_plan
+    dog = Dog.find_by(id: estimate_meal_plan_params[:dog_id])
+
+    price_estimate = dog.price_estimate(estimate_meal_plan_params.except(:dog_id))
+
+    render json: { amount: price_estimate }, status: 200
+  end
+
+  # Route: /api/v1/user/subscriptions/meal_plan
+  # Method: PUT
+  # Update meal plan
+  def update_meal_plan
+    update_meal_plan_params = estimate_meal_plan_params
+
+    dog = Dog.find_by(update_meal_plan_params[:dog_id])
+
+    if dog.present?
+      new_portion_adjustment = update_meal_plan_params[:portion_adjustment]
+      if dog.portion_adjustment != new_portion_adjustment
+        MyLib::SlackNotifier.notify(
+          webhook: Rails.configuration.slack_webhooks[:accountpage],
+          text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} adjusted their portion to #{new_portion_adjustment.present? ? new_portion_adjustment : "recommended"}",
+          icon_emoji: ":shallow_pan_of_food:"
+        )
+      end
+
+      # Update dog
+      dog.update(update_meal_plan_params)
+
+      if dog.chargebee_subscription_id.present? && !dog.has_custom_plan
+        subscription_result = ChargeBee::Subscription.retrieve(dog.chargebee_subscription_id)
+
+        if ["future", "active"].include?(subscription_result.subscription.status)
+          MyLib::Chargebee.update_subscription(
+            subscription_status: subscription_result.subscription.status,
+            has_scheduled_changes: subscription_result.subscription.has_scheduled_changes,
+            dog_chargebee_subscription_id: dog.chargebee_subscription_id,
+            chargebee_plan_interval: meal_type,
+            addons: dog.subscription_param_addons,
+            apply_coupon_statuses: ["future"]
+          )
+
+          MyLib::SlackNotifier.notify(
+            webhook: Rails.configuration.slack_webhooks[:accountpage],
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their meaplan to #{dog.readable_mealplan}",
+            icon_emoji: ":shallow_pan_of_food:"
+          )
+        end
+      end
+
+      render json: {
+        status: true
+      }, status: 200
+    else
+      render json: {
+        status: false,
+        err: "Dog does not exist!"
+      }, status: 500
+    end
+  end
+
   private
     def pause_subscriptions_params
       params.permit(:dog_id, :pause_until)
@@ -193,5 +290,23 @@ class Api::V1::SubscriptionsController < ApplicationController
         :reference_id,
         :referral_code,
         dogs_attributes: [:id, :meal_type, :kibble_type])
+    end
+
+    def daily_portions_params
+      params.permit(:dog_name, :kibble_recipe, cooked_recipes: [])
+    end
+
+    def estimate_meal_plan_params
+      params.permit(
+        :dog_id,
+        :chicken_recipe,
+        :beef_recipe,
+        :turkey_recipe,
+        :lamb_recipe,
+        :kibble_recipe,
+        :cooked_portion,
+        :kibble_portion,
+        :portion_adjustment
+      )
     end
 end

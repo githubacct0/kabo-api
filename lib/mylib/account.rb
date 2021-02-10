@@ -191,6 +191,122 @@ module MyLib
           }
         end
       end
+
+      # Get cooked recipes
+      def cooked_recipes
+        [
+          {
+            name: "Tender Chicken",
+            recipe: "chicken",
+            image: nil,
+            description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken.",
+            new: false,
+            analysis: Constants::CHICKEN_ANALYSIS
+          },
+          {
+            name: "Savoury Beef",
+            recipe: "beef",
+            image: nil,
+            description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef.",
+            new: false,
+            analysis: Constants::BEEF_ANALYSIS
+          },
+          {
+            name: "Hearty Turkey",
+            recipe: "turkey",
+            image: nil,
+            description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
+            new: false,
+            analysis: Constants::TURKEY_ANALYSIS
+          },
+          {
+            name: "Luscious Lamb",
+            recipe: "lamb",
+            image: nil,
+            description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!",
+            new: true,
+            analysis: Constants::LAMB_ANALYSIS
+          }
+        ]
+      end
+
+      # Get kibble recipes
+      def kibble_recipes
+        [
+          {
+            name: "Chicken",
+            recipe: "chicken",
+            image: nil,
+            description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+            new: false,
+            analysis: Constants::CHICKEN_KIBBLE_ANALYSIS
+          },
+          {
+            name: "Turkey & Salmon",
+            recipe: "turkey+salmon",
+            image: nil,
+            description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+            new: false,
+            analysis: Constants::TURKEY_SALMON_KIBBLE_ANALYSIS
+          },
+          {
+            name: "Duck",
+            recipe: "duck",
+            image: nil,
+            description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+            new: false,
+            analysis: Constants::DUCK_KIBBLE_ANALYSIS
+          }
+        ]
+      end
+
+      # Get daily portions
+      def daily_portions(chicken_recipe:, beef_recipe:, turkey_recipe:, lamb_recipe:, kibble_recipe:)
+      end
+
+      # Get only cooked recipe daily portions
+      def only_cooked_recipe_daily_portions(name:)
+        [
+          {
+            title: "25% Kabo Diet",
+            description: "About 25% of #{name}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
+            cooked_portion: 25
+          },
+          {
+            title: "100% Kabo Diet",
+            description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}’s daily caloric needs, which is 1091 calories.",
+            cooked_portion: 100
+          }
+        ]
+      end
+
+      # Get mixed cooked and kibble recipe daily portions
+      def mixed_cooked_and_kibble_recipe_daily_portions
+        [
+          {
+            title: "25% cooked, 75% kibble",
+            cooked_portion: 25,
+            kibble_portion: 75
+          },
+          {
+            title: "50% cooked, 50% kibble",
+            cooked_portion: 50,
+            kibble_portion: 50
+          }
+        ]
+      end
+
+      # Get only kibble recipe daily portions
+      def only_kibble_recipe_daily_portions(name:)
+        [
+          {
+            title: "2 weeks worth",
+            description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
+            kibble_portion: 100,
+            plan_interval: 2
+          }
+        ]
+      end
     end
   end
 end

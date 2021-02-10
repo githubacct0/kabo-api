@@ -564,7 +564,8 @@ module MyLib
         has_scheduled_changes:,
         dog_chargebee_subscription_id:,
         chargebee_plan_interval:,
-        addons:
+        addons:,
+        apply_coupon_statuses:
       )
         existing_coupon_codes = []
         if has_scheduled_changes
@@ -576,9 +577,9 @@ module MyLib
         update_params = {
           plan_id: chargebee_plan_interval,
           addons: addons,
-          replace_addon_list: true,
-          coupon_ids: existing_coupon_codes
+          replace_addon_list: true
         }
+        update_params[:coupon_ids] = existing_coupon_codes if apply_coupon_statuses.include? subscription_status
         subscription_status == "active" && update_params[:end_of_term] = true
 
         ChargeBee::Subscription.update(dog_chargebee_subscription_id, update_params)

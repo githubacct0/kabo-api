@@ -11,10 +11,6 @@ module Dogable
     enum weight_unit: [ :lbs, :kg ]
   end
 
-  def get_chargebee_plan_interval
-    self.class.name == "Dog" ? user.chargebee_plan_interval : temp_user.chargebee_plan_interval
-  end
-
   def plan_units_v2(total_units = false, bypass_adjustment = false, adjustment_direction = nil)
     total_recipes = [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).size
 
@@ -27,7 +23,7 @@ module Dogable
 
     ounces_for_meal_per_day = (calories_for_meal_per_day / 43)
 
-    interval = get_chargebee_plan_interval
+    interval = user.chargebee_plan_interval
 
     ounces_for_meal_during_plan_interval = ounces_for_meal_per_day*14 # for 2 weeks
 
@@ -67,7 +63,7 @@ module Dogable
       bags_for_meal_per_day = (calories_for_meal_per_day / 8095) # can be a fraction of a bag
     end
 
-    interval = get_chargebee_plan_interval
+    interval = user.chargebee_plan_interval
 
     ounces_for_meal_during_plan_interval = bags_for_meal_per_day*14 # for 2 weeks
 
@@ -240,42 +236,116 @@ module Dogable
   def daily_portions
     portions = []
     if only_cooked_recipe
-      portions = [
-        {
-          title: "25% Kabo Diet",
-          description: "About 25% of #{name}’s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
-          cooked_portion: 25
-        },
-        {
-          title: "100% Kabo Diet",
-          description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}’s daily caloric needs, which is 1091 calories.",
-          cooked_portion: 100
-        }
-      ]
+      portions = MyLib::Account.only_cooked_recipe_daily_portions(name: name)
     elsif mixed_cooked_and_kibble_recipe
-      portions = [
-        {
-          title: "25% cooked, 75% kibble",
-          cooked_portion: 25,
-          kibble_portion: 75
-        },
-        {
-          title: "50% cooked, 50% kibble",
-          cooked_portion: 50,
-          kibble_portion: 50
-        }
-      ]
+      portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
     elsif only_kibble_recipe
-      portions = [
-        {
-          title: "2 weeks worth",
-          description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
-          kibble_portion: 100,
-          plan_interval: 2
-        }
-      ]
+      portions = MyLib::Account.only_kibble_recipe_daily_portions(name: name)
     end
 
     portions
+  end
+
+  # Get price estimate
+  def price_estimate(meal_params = {})
+    temp_dog_attr = self.dup.attributes
+    temp_dog_attr.merge!(meal_params)
+    temp_dog_attr[:created_at] = user.created_at
+
+    temp_dog = Dog.new(temp_dog_attr)
+
+    subscription_param_addons = []
+
+    subscription_param_addons.push({
+      id: "beef_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("beef_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.beef_recipe
+
+    subscription_param_addons.push({
+      id: "chicken_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("chicken_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.chicken_recipe
+
+    subscription_param_addons.push({
+      id: "turkey_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("turkey_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.turkey_recipe
+
+    subscription_param_addons.push({
+      id: "lamb_#{user.chargebee_plan_interval}",
+      unit_price: user.unit_price("lamb_#{user.chargebee_plan_interval}"),
+      quantity: temp_dog.plan_units_v2
+    }) if temp_dog.lamb_recipe
+
+    subscription_param_addons.push({
+      id: "#{temp_dog.kibble_recipe}_kibble_#{user.chargebee_plan_interval}",
+      quantity: temp_dog.kibble_quantity_v2
+    }) if temp_dog.kibble_recipe.present?
+
+    # Include service fee
+    if user.dogs.size == 1 && temp_dog.only_cooked_recipe && temp_dog.plan_units_v2(true) < user.plan_unit_fee_limit && user.created_at < DateTime.parse("November 5, 2020 at 7:40am EDT")
+      subscription_param_addons.push(
+        {
+          id: "delivery-service-fee-#{user.how_often.split("_")[0]}-weeks"
+        }
+      )
+    end
+
+    result = ChargeBee::Estimate.update_subscription({
+      subscription: {
+        id: chargebee_subscription_id,
+        plan_id: user.chargebee_plan_interval,
+        use_existing_balances: false
+      },
+      addons: subscription_param_addons,
+      replace_addon_list: true
+    })
+
+    invoice_estimate = result.estimate.next_invoice_estimate
+
+    if !temp_dog.beef_recipe && !temp_dog.chicken_recipe && !temp_dog.turkey_recipe && !temp_dog.lamb_recipe && temp_dog.kibble_recipe.blank?
+      "--"
+    else
+      "#{Money.new(invoice_estimate.total).format}"
+    end
+  rescue StandardError => e
+    puts "Error: #{e.message}"
+  end
+
+  # Recurring Addon
+  def subscription_recurring_addon(recipe_type, chargebee_plan_interval, quantity)
+    addon_id = "#{recipe_type}_#{chargebee_plan_interval}"
+    {
+      id: addon_id,
+      unit_price: user.unit_price(addon_id),
+      quantity: quantity
+    }
+  end
+
+  # Get subscription param addons
+  def subscription_param_addons
+    addons = []
+
+    # add addon for lower AOV customers, only if the customer has 1 dog
+    if user.dogs.size == 1 && kibble_portion.blank? && plan_units_v2(true) < user.plan_unit_fee_limit
+      addons.push({ id: "delivery-service-fee-#{user.how_often.split("_")[0]}-weeks" })
+    end
+
+    # RECURRING ADDONS
+    user_chargebee_plan_interval = user.chargebee_plan_interval
+    beef_recipe && addons.push(subscription_recurring_addon("beef", user_chargebee_plan_interval, dog_plan_units_v2))
+    chicken_recipe && addons.push(subscription_recurring_addon("chicken", user_chargebee_plan_interval, dog_plan_units_v2))
+    turkey_recipe && addons.push(subscription_recurring_addon("turkey", user_chargebee_plan_interval, dog_plan_units_v2))
+    lamb_recipe && addons.push(subscription_recurring_addon("lamb", user_chargebee_plan_interval, dog_plan_units_v2))
+
+    kibble_recipe.present? && addons.push({
+      id: "#{kibble_recipe}_kibble_#{user_chargebee_plan_interval}",
+      quantity: kibble_quantity_v2
+    })
+
+    addons
   end
 end

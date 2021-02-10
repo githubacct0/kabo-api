@@ -39,7 +39,7 @@ class Api::V1::UsersController < ApplicationController
         invoice_estimate_total: invoice_estimate_total,
         invoice_estimate_description: invoice_estimate_description,
         shipping_province: subscription.shipping_address.state_code,
-        addons: subscription.addons.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
+        addons: subscription.addons&.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
       }
       card = chargebee_subscription.card
       shipping_address = subscription&.shipping_address
@@ -151,33 +151,13 @@ class Api::V1::UsersController < ApplicationController
           subscription_result = ChargeBee::Subscription.retrieve(dog.chargebee_subscription_id)
 
           if ["future", "active"].include?(subscription_result.subscription.status)
-            # add addon for lower AOV customers, only if the customer has 1 dog
-            subscription_param_addons = []
-            if dogs.size == 1 && dog.kibble_portion.blank? && dog.plan_units_v2(true) < @user.plan_unit_fee_limit
-              subscription_param_addons.push(
-                {
-                  id: "delivery-service-fee-#{@user.how_often.split("_")[0]}-weeks"
-                }
-              )
-            end
-
-            # Recurring Addons
-            dog_plan_units_v2 = dog.plan_units_v2
-            dog.beef_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("beef", meal_type, dog_plan_units_v2))
-            dog.chicken_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("chicken", meal_type, dog_plan_units_v2))
-            dog.turkey_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("turkey", meal_type, dog_plan_units_v2))
-            dog.lamb_recipe && subscription_param_addons.push(dog.subscription_recurring_addon("lamb", meal_type, dog_plan_units_v2))
-            subscription_param_addons.push({
-              id: "#{dog.kibble_recipe}_kibble_#{meal_type}",
-              quantity: dog.kibble_quantity_v2
-            }) if dog.kibble_recipe.present?
-
             MyLib::Chargebee.update_subscription(
               subscription_status: subscription_result.subscription.status,
               has_scheduled_changes: subscription_result.subscription.has_scheduled_changes,
               dog_chargebee_subscription_id: dog.chargebee_subscription_id,
               chargebee_plan_interval: meal_type,
-              addons: subscription_param_addons
+              addons: dog.subscription_param_addons,
+              apply_coupon_statuses: ["active", "future"]
             )
 
             if subscription_result.subscription.next_billing_at != starting_date
@@ -201,21 +181,17 @@ class Api::V1::UsersController < ApplicationController
         end
       end
 
-      if Rails.env.production?
-        begin
-          notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
-          notifier.post(
-            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their delivery frequency from #{original_chargebee_plan_interval} to #{submitted_meal_type}",
-            icon_emoji: ":shallow_pan_of_food:"
-          ) if original_chargebee_plan_interval != meal_type
-          notifier.post(
-            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their next billing date from #{Time.zone.at(original_next_billing_date)} to #{Time.zone.at(starting_date)}",
-            icon_emoji: ":shallow_pan_of_food:"
-          ) if original_next_billing_date
-        rescue StandardError => e
-          Raven.capture_exception(e)
-        end
-      end
+      notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
+      MyLib::SlackNotifier.notify(
+        notifier: notifier,
+        text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their delivery frequency from #{original_chargebee_plan_interval} to #{submitted_meal_type}",
+        icon_emoji: ":shallow_pan_of_food:"
+      ) if original_chargebee_plan_interval != meal_type
+      MyLib::SlackNotifier.notify(
+        notifier: notifier,
+        text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their next billing date from #{Time.zone.at(original_next_billing_date)} to #{Time.zone.at(starting_date)}",
+        icon_emoji: ":shallow_pan_of_food:"
+      ) if original_next_billing_date
 
       render json: {
         status: true

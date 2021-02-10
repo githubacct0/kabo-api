@@ -5,6 +5,8 @@ class TempUser < ApplicationRecord
 
   # Relations
   has_many :temp_dogs, inverse_of: :temp_user
+  has_many :dogs, class_name: "TempDogs", foreign_key: "temp_dog_id"
+
   accepts_nested_attributes_for :temp_dogs, reject_if: :all_blank, allow_destroy: true
 
   validates_associated :temp_dogs, message: "profile is incomplete"
