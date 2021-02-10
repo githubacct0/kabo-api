@@ -201,18 +201,13 @@ class Api::V1::SubscriptionsController < ApplicationController
     dog = Dog.find_by(update_meal_plan_params[:dog_id])
 
     if dog.present?
-      if dog.portion_adjustment != update_meal_plan_params[:portion_adjustment]
-        if Rails.env.production?
-          begin
-            notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
-            notifier.post(
-              text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if (Rails.configuration.heroku_app_name != 'kabo-app') }#{@user.email} adjusted their portion to #{params[:dog][:portion_adjustment].blank? ? "recommended" : params[:dog][:portion_adjustment]}",
-              icon_emoji: ":shallow_pan_of_food:"
-            )
-          rescue StandardError => e
-            Raven.capture_exception(e)
-          end
-        end
+      new_portion_adjustment = update_meal_plan_params[:portion_adjustment]
+      if dog.portion_adjustment != new_portion_adjustment
+        MyLib::SlackNotifier.notify(
+          webhook: Rails.configuration.slack_webhooks[:accountpage],
+          text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} adjusted their portion to #{new_portion_adjustment.present? ? new_portion_adjustment : "recommended"}",
+          icon_emoji: ":shallow_pan_of_food:"
+        )
       end
 
       # Update dog
@@ -231,17 +226,11 @@ class Api::V1::SubscriptionsController < ApplicationController
             apply_coupon_statuses: ["future"]
           )
 
-          if Rails.env.production?
-            begin
-              notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
-              notifier.post(
-                text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their meaplan to #{dog.readable_mealplan}",
-                icon_emoji: ":shallow_pan_of_food:"
-              )
-            rescue StandardError => e
-              Raven.capture_exception(e)
-            end
-          end
+          MyLib::SlackNotifier.notify(
+            webhook: Rails.configuration.slack_webhooks[:accountpage],
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their meaplan to #{dog.readable_mealplan}",
+            icon_emoji: ":shallow_pan_of_food:"
+          )
         end
       end
 

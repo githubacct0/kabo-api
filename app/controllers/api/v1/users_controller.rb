@@ -184,11 +184,13 @@ class Api::V1::UsersController < ApplicationController
       if Rails.env.production?
         begin
           notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
-          notifier.post(
+          MyLib::SlackNotifier.notify(
+            notifier: notifier,
             text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their delivery frequency from #{original_chargebee_plan_interval} to #{submitted_meal_type}",
             icon_emoji: ":shallow_pan_of_food:"
           ) if original_chargebee_plan_interval != meal_type
-          notifier.post(
+          MyLib::SlackNotifier.notify(
+            notifier: notifier,
             text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their next billing date from #{Time.zone.at(original_next_billing_date)} to #{Time.zone.at(starting_date)}",
             icon_emoji: ":shallow_pan_of_food:"
           ) if original_next_billing_date
