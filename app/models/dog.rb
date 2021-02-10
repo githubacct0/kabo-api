@@ -186,16 +186,6 @@ class Dog < ApplicationRecord
     end
   end
 
-  # Recurring Addons
-  def subscription_recurring_addon(recipe_type, chargebee_plan_interval, quantity)
-    addon_id = "#{recipe_type}_#{chargebee_plan_interval}"
-    {
-      id: addon_id,
-      unit_price: user.unit_price(addon_id),
-      quantity: quantity
-    }
-  end
-
   # Onboarding data
   class << self
     # Get breed list

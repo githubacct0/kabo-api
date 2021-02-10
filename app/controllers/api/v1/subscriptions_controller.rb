@@ -64,7 +64,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
           SlackWorker.perform_async(
             hook_url: Rails.configuration.slack_webhooks[:accountpage],
-            text: "#{ ('[' + ENV['HEROKU_APP_NAME'] + '] ') if ENV['HEROKU_APP_NAME'] != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
+            text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
             icon_emoji: ":arrow_forward:"
           )
 
@@ -182,14 +182,78 @@ class Api::V1::SubscriptionsController < ApplicationController
   end
 
   # Route: /api/v1/user/subscriptions/meal_plan/estimate
-  # Method: GET
+  # Method: POST
   # Get estimate of meal plans
   def estimate_meal_plan
     dog = Dog.find_by(id: estimate_meal_plan_params[:dog_id])
 
     price_estimate = dog.price_estimate(estimate_meal_plan_params.except(:dog_id))
 
-    render json: { amount: price_estimate }
+    render json: { amount: price_estimate }, status: 200
+  end
+
+  # Route: /api/v1/user/subscriptions/meal_plan
+  # Method: PUT
+  # Update meal plan
+  def update_meal_plan
+    update_meal_plan_params = estimate_meal_plan_params
+
+    dog = Dog.find_by(update_meal_plan_params[:dog_id])
+
+    if dog.present?
+      if dog.portion_adjustment != update_meal_plan_params[:portion_adjustment]
+        if Rails.env.production?
+          begin
+            notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
+            notifier.post(
+              text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if (Rails.configuration.heroku_app_name != 'kabo-app') }#{@user.email} adjusted their portion to #{params[:dog][:portion_adjustment].blank? ? "recommended" : params[:dog][:portion_adjustment]}",
+              icon_emoji: ":shallow_pan_of_food:"
+            )
+          rescue StandardError => e
+            Raven.capture_exception(e)
+          end
+        end
+      end
+
+      # Update dog
+      dog.update(update_meal_plan_params)
+
+      if dog.chargebee_subscription_id.present? && !dog.has_custom_plan
+        subscription_result = ChargeBee::Subscription.retrieve(dog.chargebee_subscription_id)
+
+        if ["future", "active"].include?(subscription_result.subscription.status)
+          MyLib::Chargebee.update_subscription(
+            subscription_status: subscription_result.subscription.status,
+            has_scheduled_changes: subscription_result.subscription.has_scheduled_changes,
+            dog_chargebee_subscription_id: dog.chargebee_subscription_id,
+            chargebee_plan_interval: meal_type,
+            addons: dog.subscription_param_addons,
+            apply_coupon_statuses: ["future"]
+          )
+
+          if Rails.env.production?
+            begin
+              notifier = Slack::Notifier.new Rails.configuration.slack_webhooks[:accountpage]
+              notifier.post(
+                text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} changed their meaplan to #{dog.readable_mealplan}",
+                icon_emoji: ":shallow_pan_of_food:"
+              )
+            rescue StandardError => e
+              Raven.capture_exception(e)
+            end
+          end
+        end
+      end
+
+      render json: {
+        status: true
+      }, status: 200
+    else
+      render json: {
+        status: false,
+        err: "Dog does not exist!"
+      }, status: 500
+    end
   end
 
   private
