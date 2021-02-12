@@ -15,7 +15,7 @@ class AuthController < ApplicationController
         success: "Welcome back, #{user.first_name}!"
       }, status: 200
     else
-      render json: { error: "Invalid Email or Password!" }, status: 200
+      render json: { error: "Invalid Email or Password!" }, status: 500
     end
   end
 end
