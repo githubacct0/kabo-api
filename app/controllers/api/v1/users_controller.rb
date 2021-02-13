@@ -24,15 +24,11 @@ class Api::V1::UsersController < ApplicationController
     chargebee_subscriptions.each do |chargebee_subscription|
       subscription = chargebee_subscription.subscription
       is_active = ["active", "future"].include? subscription.status
-      if is_active
-        active_subscription = subscription
-        invoice_estimate = ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate
-        invoice_estimate_total = invoice_estimate.total
-        invoice_estimate_description = invoice_estimate.line_items.select { |li| li.subscription_id == subscription.id }[0].description
-      else
-        invoice_estimate_total = "N/A"
-        invoice_estimate_description = "N/A"
-      end
+      active_subscription = subscription if is_active
+      invoice = MyLib::Chargebee.get_invoice(subscription: subscription, statuses: ["active", "future"])
+      invoice_estimate_total = invoice[:invoice_estimate_total]
+      invoice_estimate_description = invoice[:invoice_estimate_description]
+
       subscriptions[subscription.id] = {
         id: subscription.id,
         status: subscription.status,
