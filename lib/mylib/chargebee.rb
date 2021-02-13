@@ -584,6 +584,30 @@ module MyLib
 
         ChargeBee::Subscription.update(dog_chargebee_subscription_id, update_params)
       end
+
+      # Get subscription list
+      def get_subscription_list(chargebee_customer_id:, status: nil)
+        param = { "customer_id[is]" => chargebee_customer_id }
+        param[:status[is]] = status if status.present?
+        ChargeBee::Subscription.list(param)
+      end
+
+      def get_invoice(subscription:, statuses: [])
+        is_active = statuses.include? subscription&.status
+        if is_active
+          invoice_estimate = ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate
+          invoice_estimate_total = invoice_estimate.total
+          invoice_estimate_description = invoice_estimate.line_items.select { |li| li.subscription_id == subscription.id }[0].description
+        else
+          invoice_estimate_total = "N/A"
+          invoice_estimate_description = "N/A"
+        end
+
+        {
+          invoice_estimate_total: invoice_estimate_total,
+          invoice_estimate_description: invoice_estimate_description
+        }
+      end
     end
   end
 end

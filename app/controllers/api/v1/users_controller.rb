@@ -295,6 +295,52 @@ class Api::V1::UsersController < ApplicationController
   def update_delivery_address
   end
 
+  # Route: /api/v1/user/apply_coupon
+  # Method: POST
+  # Apply coupon
+  def apply_coupon
+    if coupon_code_params_valid?
+      coupon_code = coupon_code_params[:coupon_code]
+      # Apply coupon code
+      begin
+        @user.dogs.each { |dog| ChargeBee::Subscription.update(dog.chargebee_subscription_id, { coupon_ids: [coupon_code] }) }
+
+        # Get subscriptions
+        subscriptions = {}
+        MyLib::Chargebee.get_subscription_list(
+          chargebee_customer_id: @user.chargebee_customer_id
+        ).each  do |chargebee_subscription|
+          subscription = chargebee_subscription.subscription
+          invoice = MyLib::Chargebee.get_invoice(subscription: subscription, statuses: ["active", "future"])
+          invoice_estimate_total = invoice[:invoice_estimate_total]
+          invoice_estimate_description = invoice[:invoice_estimate_description]
+          subscriptions[subscription.id] = {
+            id: subscription.id,
+            status: subscription.status,
+            invoice_estimate_total: invoice_estimate_total,
+            invoice_estimate_description: invoice_estimate_description,
+            shipping_province: subscription.shipping_address.state_code,
+            addons: subscription.addons&.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
+          }
+        end
+
+        render json: {
+          subscriptions: subscriptions
+        }, status: :ok
+      rescue StandardError => e
+        Raven.capture_exception(e)
+
+        render json: {
+          error: "Invalid coupon code!"
+        }, status: :bad_request
+      end
+    else
+      render json: {
+        error: "Missed params!"
+      }, status: :bad_request
+    end
+  end
+
   private
     def update_password_params
       params.permit(:password, :password_confirmation)
@@ -304,9 +350,17 @@ class Api::V1::UsersController < ApplicationController
       params.permit(:amount_of_food, :how_often, :starting_date)
     end
 
+    def coupon_code_params
+      params.permit(:coupon_code)
+    end
+
     def update_delivery_frequency_params_valid?
       update_delivery_frequency_params[:amount_of_food].present? &&
         update_delivery_frequency_params[:how_often].present? &&
         update_delivery_frequency_params[:starting_date].present?
+    end
+
+    def coupon_code_params_valid?
+      coupon_code_params[:coupon_code]
     end
 end
