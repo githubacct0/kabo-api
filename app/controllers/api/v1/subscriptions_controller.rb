@@ -192,7 +192,7 @@ class Api::V1::SubscriptionsController < ApplicationController
   def update_meal_plan
     update_meal_plan_params = estimate_meal_plan_params
 
-    dog = Dog.find_by(update_meal_plan_params[:dog_id])
+    dog = Dog.find_by_id(update_meal_plan_params[:dog_id])
 
     if dog.present?
       new_portion_adjustment = update_meal_plan_params[:portion_adjustment]
@@ -215,7 +215,7 @@ class Api::V1::SubscriptionsController < ApplicationController
             subscription_status: subscription_result.subscription.status,
             has_scheduled_changes: subscription_result.subscription.has_scheduled_changes,
             dog_chargebee_subscription_id: dog.chargebee_subscription_id,
-            chargebee_plan_interval: meal_type,
+            chargebee_plan_interval: @user.chargebee_plan_interval,
             addons: dog.subscription_param_addons,
             apply_coupon_statuses: ["future"]
           )
