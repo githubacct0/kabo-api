@@ -291,7 +291,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
 
     def estimate_meal_plan_params
-      params.permit(
+      params.require(:subscription).permit(
         :dog_id,
         :chicken_recipe,
         :beef_recipe,
