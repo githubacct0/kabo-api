@@ -51,10 +51,9 @@ module MyLib
             end
 
             if !user.shipping_first_name.blank?
-              list = ChargeBee::Subscription.list({
-                "customer_id[is]" => user.chargebee_customer_id
-              })
-              list.each do |entry|
+              MyLib::Chargebee.get_subscription_list(
+                chargebee_customer_id: user.chargebee_customer_id
+              ).each do |entry|
                 ChargeBee::Address.update({
                   subscription_id: entry.subscription.id,
                   label: "shipping_address",
@@ -136,11 +135,10 @@ module MyLib
       end
 
       def update_subscription_start_date(user, start_date)
-        list = ChargeBee::Subscription.list({
-          "status[is]" => "future",
-          "customer_id[is]" => user.chargebee_customer_id
-        })
-        list.each do |entry|
+        MyLib::Chargebee.get_subscription_list(
+          chargebee_customer_id: user.chargebee_customer_id,
+          status: "future"
+        ).each do |entry|
           ChargeBee::Subscription.update(entry.subscription.id, {
             start_date: start_date
           })

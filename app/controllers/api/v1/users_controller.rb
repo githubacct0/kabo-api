@@ -18,21 +18,16 @@ class Api::V1::UsersController < ApplicationController
     subscription_created_at = nil
     card = {}
 
-    chargebee_subscriptions = ChargeBee::Subscription.list({
-      "customer_id[is]" => @user.chargebee_customer_id
-    })
-    chargebee_subscriptions.each do |chargebee_subscription|
+    MyLib::Chargebee.get_subscription_list(
+      chargebee_customer_id: @user.chargebee_customer_id
+    ).each do |chargebee_subscription|
       subscription = chargebee_subscription.subscription
       is_active = ["active", "future"].include? subscription.status
-      if is_active
-        active_subscription = subscription
-        invoice_estimate = ChargeBee::Estimate.renewal_estimate(subscription.id).estimate.invoice_estimate
-        invoice_estimate_total = invoice_estimate.total
-        invoice_estimate_description = invoice_estimate.line_items.select { |li| li.subscription_id == subscription.id }[0].description
-      else
-        invoice_estimate_total = "N/A"
-        invoice_estimate_description = "N/A"
-      end
+      active_subscription = subscription if is_active
+      invoice = MyLib::Chargebee.get_invoice(subscription: subscription, statuses: ["active", "future"])
+      invoice_estimate_total = invoice[:invoice_estimate_total]
+      invoice_estimate_description = invoice[:invoice_estimate_description]
+
       subscriptions[subscription.id] = {
         id: subscription.id,
         status: subscription.status,
@@ -217,10 +212,9 @@ class Api::V1::UsersController < ApplicationController
     payment_method = {}
     payment_source = {}
 
-    chargebee_subscriptions = ChargeBee::Subscription.list({
-      "customer_id[is]" => @user.chargebee_customer_id
-    })
-    chargebee_subscriptions.each do |chargebee_subscription|
+    MyLib::Chargebee.get_subscription_list(
+      chargebee_customer_id: @user.chargebee_customer_id
+    ).each do |chargebee_subscription|
       subscriptions[chargebee_subscription.subscription.id] = {
         status: chargebee_subscription.subscription.status
       }
