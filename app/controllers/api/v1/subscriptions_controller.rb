@@ -15,19 +15,17 @@ class Api::V1::SubscriptionsController < ApplicationController
         ChargeBee::Subscription.pause(dog.chargebee_subscription_id, pause_params)
 
         render json: {
-          status: true
-        }, status: 200
+          dog: dog
+        }, status: :ok
       else
         render json: {
-          status: false,
-          err: "Dog not exist!"
-        }, status: 500
+          error: "Dog not exist!"
+        }, status: :not_found
       end
     else
       render json: {
-        status: false,
-        err: "Missed params!"
-      }, status: 500
+        error: "Missed params!"
+      }, status: :bad_request
     end
   end
 
@@ -84,27 +82,24 @@ class Api::V1::SubscriptionsController < ApplicationController
           )
 
           render json: {
-            status: true
-          }, status: 200
+            dog: dog
+          }, status: :ok
         else
           render json: {
-            status: false,
-            err: "Your subscription is already active, please contact help@kabo.co if you're experiencing any issues"
-          }, status: 200
+            error: "Your subscription is already active, please contact help@kabo.co if you're experiencing any issues"
+          }, status: :ok
         end
       rescue StandardError => e
         Raven.capture_exception(e)
 
         render json: {
-          status: false,
-          err: e.message
-        }, status: 500
+          error: e.message
+        }, status: :internal_server_error
       end
     else
       render json: {
-        status: false,
-        err: "Dog not exist!"
-      }, status: 500
+        error: "Dog not exist!"
+      }, status: :not_found
     end
   end
 
@@ -131,20 +126,19 @@ class Api::V1::SubscriptionsController < ApplicationController
         ChargeBee::Subscription.cancel(dog.chargebee_subscription_id)
 
         render json: {
-          status: true
-        }, status: 200
+          dog: dog
+        }, status: :ok
       rescue => e
         Raven.capture_exception(e)
 
         render json: {
-          status: false
-        }, status: 500
+          error: e.message
+        }, status: :internal_server_error
       end
     else
       render json: {
-        status: false,
-        err: "Dog not exist!"
-      }, status: 500
+        error: "Dog not exist!"
+      }, status: :not_found
     end
   end
 
@@ -155,7 +149,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     render json: {
       cooked_recipes: MyLib::Account.cooked_recipes,
       kibble_recipes: MyLib::Account.kibble_recipes
-    }, status: 200
+    }, status: :ok
   end
 
   # Route: /api/v1/user/subscriptions/portions
@@ -178,7 +172,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     render json: {
       portions: portions
-    }, status: 200
+    }, status: :ok
   end
 
   # Route: /api/v1/user/subscriptions/meal_plan/estimate
@@ -189,7 +183,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     price_estimate = dog.price_estimate(estimate_meal_plan_params.except(:dog_id))
 
-    render json: { amount: price_estimate }, status: 200
+    render json: { amount: price_estimate }, status: :ok
   end
 
   # Route: /api/v1/user/subscriptions/meal_plan
@@ -235,13 +229,12 @@ class Api::V1::SubscriptionsController < ApplicationController
       end
 
       render json: {
-        status: true
-      }, status: 200
+        dog: dog
+      }, status: :ok
     else
       render json: {
-        status: false,
-        err: "Dog does not exist!"
-      }, status: 500
+        error: "Dog does not exist!"
+      }, status: :not_found
     end
   end
 

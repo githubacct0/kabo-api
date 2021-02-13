@@ -121,7 +121,7 @@ class Api::V1::UsersController < ApplicationController
       # Next occurencies for pause plans
       next_occurrencies: MyLib::Icecube.subscription_next_occurrencies,
       skipped_first_box: @user.skipped_first_box
-    }, status: 200
+    }, status: :ok
   end
 
   # Route: /api/v1/user/delivery_frequency
@@ -177,7 +177,6 @@ class Api::V1::UsersController < ApplicationController
               end
             end
           end
-
         end
       end
 
@@ -194,13 +193,12 @@ class Api::V1::UsersController < ApplicationController
       ) if original_next_billing_date
 
       render json: {
-        status: true
-      }, status: 200
+        user: @user
+      }, status: :ok
     else
       render json: {
-        status: false,
-        err: "Missed params!"
-      }, status: 500
+        error: "Missed params!"
+      }, status: :bad_request
     end
   end
 
@@ -260,7 +258,7 @@ class Api::V1::UsersController < ApplicationController
       payment_source: payment_source,
       card: card,
       orders: MyLib::Transaction.orders(user: @user, subscription: subscription, limit: 2, loopable: false)
-    }, status: 200
+    }, status: :ok
   end
 
   # Route: /api/v1/user/dogs
@@ -283,12 +281,11 @@ class Api::V1::UsersController < ApplicationController
 
     render json: {
       status: status
-    }, status: 200
+    }, status: :ok
   rescue => err
     render json: {
-      status: false,
-      err: err.message
-    }, status: 500
+      error: err.message
+    }, status: :bad_request
   end
 
   # Route: /api/v1/user/delivery_address

@@ -21,7 +21,7 @@ class Api::V1::OnboardingController < ActionController::API
       input_params.include?("body_types") && data.merge!({ body_types: body_types })
       input_params.include?("activity_levels") && data.merge!({ activity_levels: activity_levels })
 
-      render json: data, status: 200
+      render json: data, status: :ok
     else
       step = dog_params[:step]
 
@@ -41,11 +41,11 @@ class Api::V1::OnboardingController < ActionController::API
         promo_banner = {
           text: "Surprise! We applied a 40% discount to your first order"
         }
-        render json: { promo_banner: promo_banner }.merge(start_data), status: 200
+        render json: { promo_banner: promo_banner }.merge(start_data), status: :ok
       elsif step == "detail"
-        render json: detail_data, status: 200
+        render json: detail_data, status: :ok
       else
-        render json: start_data.merge(detail_data), status: 200
+        render json: start_data.merge(detail_data), status: :ok
       end
     end
   end
@@ -55,7 +55,7 @@ class Api::V1::OnboardingController < ActionController::API
     render json: {
       cooked_recipes: MyLib::Account.cooked_recipes,
       kibble_recipes: MyLib::Account.kibble_recipes
-    }, status: 200
+    }, status: :ok
   end
 
   # Get daily portions
@@ -72,12 +72,11 @@ class Api::V1::OnboardingController < ActionController::API
 
       render json: {
         daily_portions: daily_portions
-      }, status: 200
+      }, status: :ok
     else
       render json: {
-        status: false,
-        err: "Missed params!"
-      }, status: 500
+        error: "Missed params!"
+      }, status: :not_found
     end
   end
 
@@ -86,10 +85,9 @@ class Api::V1::OnboardingController < ActionController::API
     temp_user = TempUser.create({ temp_dogs_attributes: onboarding_params[:dogs] })
 
     render json: {
-      status: true,
       temp_user_id: temp_user.id,
       temp_dog_ids: temp_user.temp_dog_ids
-    }, status: 200
+    }, status: :ok
   end
 
   # Update
@@ -97,9 +95,8 @@ class Api::V1::OnboardingController < ActionController::API
     temp_user = TempUser.find(params[:user_id])
     if temp_user.nil?
       render json: {
-        status: false,
-        err: "Temp User doesn't exist!"
-      }, status: 500
+        error: "Temp User doesn't exist!"
+      }, status: :not_found
     else
       step = onboarding_params[:step]
       update_params = {}
@@ -110,10 +107,9 @@ class Api::V1::OnboardingController < ActionController::API
         temp_user.update(update_params)
 
         render json: {
-          status: true,
           temp_user_id: temp_user.id,
           temp_dog_ids: temp_user.temp_dog_ids
-        }, status: 200
+        }, status: :ok
       elsif step == "account"
         onboarding_params[:first_name].present? && update_params[:first_name] = onboarding_params[:first_name]
         onboarding_params[:email].present? && update_params[:email] = onboarding_params[:email]
@@ -141,9 +137,8 @@ class Api::V1::OnboardingController < ActionController::API
 
             if Rack::Utils.parse_nested_query(agreement_response.body)["ACK"] == "Failure"
               render json: {
-                status: false,
-                err: "Cancelled PayPal Authorization"
-              }, status: 500
+                error: "Cancelled PayPal Authorization"
+              }, status: :bad_request
             else
               details_response = MyLib::Paypal.get_express_checkout_details
               paypal_checkout_details = Rack::Utils.parse_nested_query(details_response.body)
@@ -168,14 +163,13 @@ class Api::V1::OnboardingController < ActionController::API
               end
 
               render json: {
-                status: true,
                 temp_user_id: temp_user.id,
                 temp_dogs: temp_dogs,
                 user: user,
                 applied_referral_code: applied_referral_code,
                 paypal_checkout: true,
                 checkout_token: checkout_token,
-              }, status: 200
+              }, status: :ok
             end
           else
             temp_dogs = temp_user.temp_dogs.map { |temp_dog|
@@ -187,17 +181,15 @@ class Api::V1::OnboardingController < ActionController::API
             }
 
             render json: {
-              status: true,
               temp_user_id: temp_user.id,
               applied_referral_code: applied_referral_code,
               temp_dogs: temp_dogs
-            }, status: 200
+            }, status: :ok
           end
         else
           render json: {
-            status: false,
-            err: "Email is invalid!"
-          }, status: 500
+            error: "Email is invalid!"
+          }, status: :bad_request
         end
       end
     end
