@@ -10,12 +10,11 @@ class AuthController < ApplicationController
 
       render json: {
         token: token,
-        user: user,
-        dogs: user.dogs,
+        email: user.email,
         success: "Welcome back, #{user.first_name}!"
-      }, status: 200
+      }, status: :ok
     else
-      render json: { error: "Invalid Email or Password!" }, status: 500
+      render json: { error: "Invalid Email or Password!" }, status: :bad_request
     end
   end
 end
