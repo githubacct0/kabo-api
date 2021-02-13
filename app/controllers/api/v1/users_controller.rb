@@ -192,9 +192,7 @@ class Api::V1::UsersController < ApplicationController
         user: @user
       }, status: :ok
     else
-      render json: {
-        error: "Missed params!"
-      }, status: :bad_request
+      render_missed_params
     end
   end
 
@@ -254,12 +252,6 @@ class Api::V1::UsersController < ApplicationController
       card: card,
       orders: MyLib::Transaction.orders(user: @user, subscription: subscription, limit: 2, loopable: false)
     }, status: :ok
-  end
-
-  # Route: /api/v1/user/dogs
-  # Method: POST
-  # Add dog by user
-  def add_dog
   end
 
   # Route: /api/v1/user/notifications
@@ -329,9 +321,7 @@ class Api::V1::UsersController < ApplicationController
         }, status: :bad_request
       end
     else
-      render json: {
-        error: "Missed params!"
-      }, status: :bad_request
+      render_missed_params
     end
   end
 
@@ -356,5 +346,11 @@ class Api::V1::UsersController < ApplicationController
 
     def coupon_code_params_valid?
       coupon_code_params[:coupon_code]
+    end
+
+    def render_missed_params
+      render json: {
+        error: "Missed params!"
+      }, status: :bad_request
     end
 end
