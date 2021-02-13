@@ -15,6 +15,6 @@ class Api::V1::OrdersController < ApplicationController
 
     render json: {
       orders: orders
-    }, status: 200
+    }, status: :ok
   end
 end

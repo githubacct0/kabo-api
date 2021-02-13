@@ -10,23 +10,21 @@ class Api::V1::CheckoutController < ApplicationController
         when "apply_referral_code"
           render json: {
             checkout_esimate: MyLib::Checkout.estimate_v2(temp_user, temp_dog, estimate_params[:referral_code], estimate_params[:referral_code], estimate_params[:postal_code])
-          }, status: 200
+          }, status: :ok
         when "recalculate"
           render json: {
-             checkout_esimate: MyLib::Checkout.estimate_v2(temp_user, temp_dog, estimate_params[:referral_code], estimate_params[:referral_code], estimate_params[:postal_code])
-           }, status: 200
+            checkout_esimate: MyLib::Checkout.estimate_v2(temp_user, temp_dog, estimate_params[:referral_code], estimate_params[:referral_code], estimate_params[:postal_code])
+          }, status: :ok
         end
       else
         render json: {
-          status: false,
-          err: "Temp dog does not exist"
-        }, status: 500
+          error: "Temp dog does not exist"
+        }, status: :not_found
       end
     else
       render json: {
-        status: false,
-        err: "Temp user does not exist"
-      }, status: 500
+        error: "Temp user does not exist"
+      }, status: :not_found
     end
   end
 
@@ -34,7 +32,7 @@ class Api::V1::CheckoutController < ApplicationController
     postal_code = params[:postal_code].strip
     render json: {
       valid: postal_code.length == 6 && MyLib::Checkout.serviceable_postal_code(postal_code)
-    }, status: 200
+    }, status: :ok
   end
 
   private
