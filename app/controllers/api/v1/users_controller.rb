@@ -104,6 +104,7 @@ class Api::V1::UsersController < ApplicationController
     end
 
     render json: {
+      user: @user,
       dogs: @user.dogs,
       # Subscriptions
       subscriptions: subscriptions,
