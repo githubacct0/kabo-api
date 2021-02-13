@@ -193,6 +193,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     update_meal_plan_params = estimate_meal_plan_params
 
     dog = Dog.find_by_id(update_meal_plan_params[:dog_id])
+    update_meal_plan_params[:id] = update_meal_plan_params.delete :dog_id
 
     if dog.present?
       new_portion_adjustment = update_meal_plan_params[:portion_adjustment]
