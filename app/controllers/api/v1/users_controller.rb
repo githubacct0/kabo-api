@@ -18,10 +18,9 @@ class Api::V1::UsersController < ApplicationController
     subscription_created_at = nil
     card = {}
 
-    chargebee_subscriptions = ChargeBee::Subscription.list({
-      "customer_id[is]" => @user.chargebee_customer_id
-    })
-    chargebee_subscriptions.each do |chargebee_subscription|
+    MyLib::Chargebee.get_subscription_list(
+      chargebee_customer_id: @user.chargebee_customer_id
+    ).each do |chargebee_subscription|
       subscription = chargebee_subscription.subscription
       is_active = ["active", "future"].include? subscription.status
       active_subscription = subscription if is_active
@@ -213,10 +212,9 @@ class Api::V1::UsersController < ApplicationController
     payment_method = {}
     payment_source = {}
 
-    chargebee_subscriptions = ChargeBee::Subscription.list({
-      "customer_id[is]" => @user.chargebee_customer_id
-    })
-    chargebee_subscriptions.each do |chargebee_subscription|
+    MyLib::Chargebee.get_subscription_list(
+      chargebee_customer_id: @user.chargebee_customer_id
+    ).each do |chargebee_subscription|
       subscriptions[chargebee_subscription.subscription.id] = {
         status: chargebee_subscription.subscription.status
       }

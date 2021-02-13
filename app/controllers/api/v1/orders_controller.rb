@@ -7,10 +7,9 @@ class Api::V1::OrdersController < ApplicationController
   def index
     # Get subscription
     subscription = {}
-    chargebee_subscriptions = ChargeBee::Subscription.list({
-      "customer_id[is]" => @user.chargebee_customer_id
-    })
-    chargebee_subscriptions.each { |chargebee_subscription| subscription = chargebee_subscription.subscription }
+    MyLib::Chargebee.get_subscription_list(
+      chargebee_customer_id: @user.chargebee_customer_id
+    ).each { |chargebee_subscription| subscription = chargebee_subscription.subscription }
     orders = MyLib::Transaction.orders(user: @user, subscription: subscription, limit: 100, loopable: true)
 
     render json: {
