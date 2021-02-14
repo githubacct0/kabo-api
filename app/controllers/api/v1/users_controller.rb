@@ -167,6 +167,33 @@ class Api::V1::UsersController < ApplicationController
   # Method: PUT
   # Update user's delivery address
   def update_delivery_address
+    unless update_delivery_address_params_valid?
+      render_missed_params
+    else
+      delivery_address_params = update_delivery_address_params
+      shipping_address = billing_address = nil, nil
+      chargebee_subscription_list = MyLib::Chargebee.get_subscription_list(chargebee_customer_id: @user.chargebee_customer_id)
+      chargebee_subscription_list.each do |entry|
+        shipping_address = entry.subscription.shipping_address
+        billing_address = entry.customer.billing_address
+      end
+      delivery_address_params[:shipping_phone_number] = shipping_address.phone
+
+      # Update shipping address
+      begin
+        @user.update!(delivery_address_params)
+        MyLib::Chargebee.update_customer_and_subscription(@user)
+
+        render json: {
+          status: true
+        }, status: :ok
+      rescue => e
+        Raven.capture_exception(e)
+        render json: {
+          error: e.message
+        }, status: :bad_request
+      end
+    end
   end
 
   # Route: /api/v1/user/delivery_address
@@ -232,6 +259,18 @@ class Api::V1::UsersController < ApplicationController
       params.permit(:coupon_code)
     end
 
+    def update_delivery_address_params
+      params.permit(
+        :shipping_first_name,
+        :shipping_last_name,
+        :shipping_street_address,
+        :shipping_apt_suite,
+        :shipping_city,
+        :shipping_postal_code,
+        :shipping_delivery_instructions
+      )
+    end
+
     def update_password_params_valid?
       update_password_params[:password].present? &&
         update_password_params[:password_confirmation]
@@ -245,6 +284,16 @@ class Api::V1::UsersController < ApplicationController
 
     def coupon_code_params_valid?
       coupon_code_params[:coupon_code]
+    end
+
+    def update_delivery_address_params_valid?
+      update_delivery_address_params[:shipping_first_name].present? &&
+        update_delivery_address_params[:shipping_last_name].present? &&
+        # update_delivery_address_params[:shipping_street_address].present? &&
+        update_delivery_address_params[:shipping_apt_suite].present? &&
+        update_delivery_address_params[:shipping_city].present? &&
+        update_delivery_address_params[:shipping_postal_code].present?
+      # update_delivery_address_params[:shipping_delivery_instructions].present?
     end
 
     def render_missed_params
