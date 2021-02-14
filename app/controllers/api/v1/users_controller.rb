@@ -169,6 +169,12 @@ class Api::V1::UsersController < ApplicationController
   def update_delivery_address
   end
 
+  # Route: /api/v1/user/delivery_address
+  # Method: PUT
+  # Update user's payment method
+  def change_payment_method
+  end
+
   # Route: /api/v1/user/apply_coupon
   # Method: POST
   # Apply coupon

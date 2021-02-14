@@ -8,9 +8,10 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      # Dashboard tab
+      ## Dashboard tab
       put "/user/delivery_frequency" => "users#update_delivery_frequency"
       post "/user/apply_coupon" => "users#apply_coupon"
+      # Subscriptions
       get "/user/subscriptions" => "subscriptions#index"
       post "/user/subscriptions/pause" => "subscriptions#pause"
       post "/user/subscriptions/resume" => "subscriptions#resume"
@@ -20,26 +21,26 @@ Rails.application.routes.draw do
       post "/user/subscriptions/meal_plan/estimate" => "subscriptions#estimate_meal_plan"
       put "/user/subscriptions/meal_plan" => "subscriptions#update_meal_plan"
 
-      # Account tab
+      ## Account tab
       get "/user/details" => "users#details"
-      post "/user/dogs" => "users#add_dog"
       put "/user/password" => "users#update_password"
       put "/user/delivery_address" => "users#update_delivery_address"
+      put "/user/payment_method" => "users#change_payment_method"
 
-      # Orders tab
+      ## Orders tab
       get "/user/orders" => "orders#index"
 
-      # Notifications
+      ## Notifications
       get "/user/notifications" => "notifications#index"
 
-      # Onboarding
+      ## Onboarding
       get "/onboarding/signup" => "onboarding#index"
       get "/onboarding/recipes" => "onboarding#recipes"
       get "/onboarding/portions" => "onboarding#portions"
       post "/onboarding/users" => "onboarding#create"
       put "/onboarding/users/:user_id" => "onboarding#update"
 
-      # Checkout
+      ## Checkout
       post "/checkout/:checkout_token/estimate" => "checkout#estimate"
       post "/checkout/postal_code/validate" => "checkout#validate_postal_code"
     end
