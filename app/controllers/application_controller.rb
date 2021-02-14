@@ -12,13 +12,13 @@ class ApplicationController < ActionController::API
   end
 
   def decoded_token
-    if auth_header
-      token = auth_header.split(" ")[1]
-      begin
-        JWT.decode(token, "my_secret", true, algorithm: "HS256")
-      rescue JWT::DecodeError
-        []
-      end
+    return [] if auth_header.nil?
+
+    token = auth_header.split(" ")[1]
+    begin
+      JWT.decode(token, "my_secret", true, algorithm: "HS256")
+    rescue JWT::DecodeError
+      []
     end
   end
 
@@ -37,6 +37,12 @@ class ApplicationController < ActionController::API
   end
 
   def require_login
-    render json: { message: "Please Login" }, status: :unauthorized unless logged_in?
+    unless logged_in?
+      if auth_header.present?
+        render json: { error: "Invalid token!" }, status: :unauthorized
+      else
+        render json: { error: "Token is required!" }, status: :unauthorized
+      end
+    end
   end
 end
