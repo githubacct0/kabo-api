@@ -264,15 +264,22 @@ class Api::V1::UsersController < ApplicationController
   # Method: PUT
   # Update user's password
   def update_password
-    status = @user.update(update_password_params)
-
-    render json: {
-      status: status
-    }, status: :ok
-  rescue => err
-    render json: {
-      error: err.message
-    }, status: :bad_request
+    if update_password_params_valid?
+      begin
+        @user.update!(update_password_params)
+        render json: {
+          token: encode_token({ user_id: @user.id })
+        }, status: :ok
+      rescue => err
+        validation_failed = "Validation failed:"
+        errors = err.message.sub(validation_failed, "") if err.message.include? validation_failed
+        render json: {
+          error: errors&.split(",")&.map(&:strip)
+        }, status: :bad_request
+      end
+    else
+      render_missed_params
+    end
   end
 
   # Route: /api/v1/user/delivery_address
@@ -336,6 +343,11 @@ class Api::V1::UsersController < ApplicationController
 
     def coupon_code_params
       params.permit(:coupon_code)
+    end
+
+    def update_password_params_valid?
+      update_password_params[:password].present? &&
+        update_password_params[:password_confirmation]
     end
 
     def update_delivery_frequency_params_valid?
