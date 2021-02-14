@@ -9,9 +9,9 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Dashboard tab
-      get "/user/account" => "users#account"
       put "/user/delivery_frequency" => "users#update_delivery_frequency"
       post "/user/apply_coupon" => "users#apply_coupon"
+      get "/user/subscriptions" => "subscriptions#index"
       post "/user/subscriptions/pause" => "subscriptions#pause"
       post "/user/subscriptions/resume" => "subscriptions#resume"
       post "/user/subscriptions/cancel" => "subscriptions#cancel"
