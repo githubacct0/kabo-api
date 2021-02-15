@@ -620,6 +620,20 @@ module MyLib
           error: e.message
         }
       end
+
+      # Cancel subscription
+      def cancel_subscription(subscription_id:)
+        result = ChargeBee::Subscription.cancel(subscription_id)
+        {
+          status: true,
+          subscription: result.subscription
+        }
+      rescue StandardError => e
+        {
+          status: false,
+          error: e.message
+        }
+      end
     end
   end
 end

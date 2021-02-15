@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Api::V1::SubscriptionsController < ApplicationController
+  include Renderable
+
   # Route: /api/v1/user/subscriptions
   # Method: GET
   # Get user's subscriptions such as next delivery, plans, delivery frequencies
@@ -124,7 +126,9 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Method: POST
   # Pause user's dog's subscription
   def pause
-    if pause_subscriptions_params_valid?
+    unless pause_subscriptions_params_valid?
+      render_missed_params
+    else
       pause_until = pause_subscriptions_params[:pause_until]
 
       dog = Dog.find_by_id(pause_subscriptions_params[:dog_id])
@@ -148,10 +152,6 @@ class Api::V1::SubscriptionsController < ApplicationController
           error: "Dog not exist!"
         }, status: :not_found
       end
-    else
-      render json: {
-        error: "Missed params!"
-      }, status: :bad_request
     end
   end
 
@@ -233,38 +233,41 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Method: POST
   # Cancel user's dog's subscription
   def cancel
-    dog = Dog.find_by_id(pause_subscriptions_params[:dog_id])
-
-    if dog.present?
-      AirtableWorker.perform_async(
-        table_id: Rails.configuration.airtable[:subscription_cancel_app_key],
-        view_name: "Other",
-        record: {
-          "Email": @user.email,
-          "CB Subscription ID": dog.chargebee_subscription_id,
-          "CB Customer ID": @user.chargebee_customer_id,
-          "Reason": "Other",
-          "Date": DateTime.now.in_time_zone("Eastern Time (US & Canada)")
-        }
-      )
-
-      begin
-        ChargeBee::Subscription.cancel(dog.chargebee_subscription_id)
-
-        render json: {
-          dog: dog
-        }, status: :ok
-      rescue => e
-        Raven.capture_exception(e)
-
-        render json: {
-          error: e.message
-        }, status: :internal_server_error
-      end
+    unless cancel_subscriptions_params_valid?
+      render_missed_params
     else
-      render json: {
-        error: "Dog not exist!"
-      }, status: :not_found
+      dog = Dog.find_by_id(cancel_subscriptions_params[:dog_id])
+
+      if dog.present?
+        AirtableWorker.perform_async(
+          table_id: Rails.configuration.airtable[:subscription_cancel_app_key],
+          view_name: "Other",
+          record: {
+            "Email": @user.email,
+            "CB Subscription ID": dog.chargebee_subscription_id,
+            "CB Customer ID": @user.chargebee_customer_id,
+            "Reason": "Other",
+            "Date": DateTime.now.in_time_zone("Eastern Time (US & Canada)")
+          }
+        )
+
+        # Cancel subscription
+        result = MyLib::Chargebee.cancel_subscription(subscription_id: dog.chargebee_subscription_id)
+
+        if result[:status]
+          render json: {
+            subscription: result[:subscription]
+          }, status: :ok
+        else
+          render json: {
+            error: result[:error]
+          }, status: :bad_request
+        end
+      else
+        render json: {
+          error: "Dog not exist!"
+        }, status: :not_found
+      end
     end
   end
 
@@ -383,35 +386,6 @@ class Api::V1::SubscriptionsController < ApplicationController
       resume_subscriptions_params[:dog_id].present?
     end
 
-    def verified_user_params
-      params.require(:user).permit(
-        :email,
-        :chargebee_plan_interval,
-        :shipping_first_name,
-        :shipping_last_name,
-        :shipping_street_address,
-        :shipping_apt_suite,
-        :shipping_city,
-        :shipping_postal_code,
-        :shipping_phone_number,
-        :shipping_delivery_instructions,
-        :same_billing_address,
-        :billing_first_name,
-        :billing_last_name,
-        :billing_street_address,
-        :billing_apt_suite,
-        :billing_city,
-        :billing_postal_code,
-        :billing_phone_number,
-        :password,
-        :password_confirmation,
-        :stripe_token,
-        :stripe_type,
-        :reference_id,
-        :referral_code,
-        dogs_attributes: [:id, :meal_type, :kibble_type])
-    end
-
     def daily_portions_params
       params.permit(:dog_name, :kibble_recipe, cooked_recipes: [])
     end
@@ -428,5 +402,13 @@ class Api::V1::SubscriptionsController < ApplicationController
         :kibble_portion,
         :portion_adjustment
       )
+    end
+
+    def cancel_subscriptions_params
+      params.require(:subscription).permit(:dog_id)
+    end
+
+    def cancel_subscriptions_params_valid?
+      cancel_subscriptions_params[:dog_id].present?
     end
 end
