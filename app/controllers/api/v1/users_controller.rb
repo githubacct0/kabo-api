@@ -180,6 +180,10 @@ class Api::V1::UsersController < ApplicationController
         billing_address = entry.customer.billing_address
       end
       delivery_address_params[:shipping_phone_number] = shipping_address.phone
+      billing_mapping = address_mapping(type: "billing")
+      billing_mapping.each do |key1, key2|
+        delivery_address_params["billing_#{key1}"] = billing_address.try(key2)
+      end
 
       # Update shipping address
       begin
