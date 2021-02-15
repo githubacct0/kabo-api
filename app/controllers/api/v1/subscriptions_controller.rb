@@ -131,11 +131,18 @@ class Api::V1::SubscriptionsController < ApplicationController
       if dog.present?
         pause_params = { pause_option: "immediately" }
         pause_until != "forever" && pause_params[:resume_date] = Time.parse(pause_until).utc.to_i
-        ChargeBee::Subscription.pause(dog.chargebee_subscription_id, pause_params)
+        # Pause subscription
+        result = MyLib::Chargebee.pause_subscription(subscription_id: dog.chargebee_subscription_id, params: pause_params)
 
-        render json: {
-          dog: dog
-        }, status: :ok
+        if result[:status]
+          render json: {
+            subscription: result[:subscription]
+          }, status: :ok
+        else
+          render json: {
+            error: result[:error]
+          }, status: :bad_request
+        end
       else
         render json: {
           error: "Dog not exist!"
@@ -360,12 +367,12 @@ class Api::V1::SubscriptionsController < ApplicationController
 
   private
     def pause_subscriptions_params
-      params.permit(:dog_id, :pause_until)
+      params.require(:subscription).permit(:dog_id, :pause_until)
     end
 
     def pause_subscriptions_params_valid?
-      pause_subscriptions_params[:pause_until].present? &&
-        pause_subscriptions_params[:dog_id].present?
+      pause_subscriptions_params[:dog_id].present? &&
+        pause_subscriptions_params[:pause_until].present?
     end
 
     def resume_subscriptions_params
