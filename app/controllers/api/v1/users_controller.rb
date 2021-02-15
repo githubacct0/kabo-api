@@ -11,7 +11,7 @@ class Api::V1::UsersController < ApplicationController
       how_often = update_delivery_frequency_params[:how_often]
       how_often = "#{amount_of_food.split("_")[0]}_weeks" if amount_of_food.split("_")[0] == how_often.split("_")[0]
       meal_type = [amount_of_food, how_often].uniq.join("_")
-      starting_date = update_delivery_frequency_params[:start_date].to_i
+      starting_date = Time.parse(update_delivery_frequency_params[:starting_date]).utc.to_i
 
       original_chargebee_plan_interval = @user.chargebee_plan_interval
       original_next_billing_date = nil
