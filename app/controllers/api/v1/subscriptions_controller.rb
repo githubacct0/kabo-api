@@ -396,7 +396,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     def daily_portions_params_valid?
       daily_portions_params[:dog_name].present? &&
-        ([:cooked_recipes, :kibble_recipe] & daily_portions_params.keys).any?
+        (["cooked_recipes", "kibble_recipe"] & daily_portions_params.keys).any?
     end
 
     def estimate_meal_plan_params
