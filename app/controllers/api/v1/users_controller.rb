@@ -345,8 +345,8 @@ class Api::V1::UsersController < ApplicationController
     def update_delivery_address_params_valid?
       update_delivery_address_params[:shipping_first_name].present? &&
         update_delivery_address_params[:shipping_last_name].present? &&
-        # update_delivery_address_params[:shipping_street_address].present? &&
-        update_delivery_address_params[:shipping_apt_suite].present? &&
+        update_delivery_address_params[:shipping_street_address].present? &&
+        # update_delivery_address_params[:shipping_apt_suite].present? &&
         update_delivery_address_params[:shipping_city].present? &&
         update_delivery_address_params[:shipping_postal_code].present?
       # update_delivery_address_params[:shipping_delivery_instructions].present?
