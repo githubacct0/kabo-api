@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Api::V1::UsersController < ApplicationController
+  include Renderable
+
   # Route: /api/v1/user/delivery_frequency
   # Method: PUT
   # Update user's delivery frequency
@@ -353,12 +355,6 @@ class Api::V1::UsersController < ApplicationController
     def change_payment_method_params_valid?
       change_payment_method_params[:stripe_token].present? &&
         change_payment_method_params.key?("same_as_shipping_address")
-    end
-
-    def render_missed_params
-      render json: {
-        error: "Missed params!"
-      }, status: :bad_request
     end
 
     def address_mapping(type:)
