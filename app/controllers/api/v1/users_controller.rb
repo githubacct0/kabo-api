@@ -196,10 +196,50 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
-  # Route: /api/v1/user/delivery_address
+  # Route: /api/v1/user/payment_method
   # Method: PUT
   # Update user's payment method
   def change_payment_method
+    unless change_payment_method_params_valid?
+      render_missed_params
+    else
+      shipping_address = billing_address = nil, nil
+      chargebee_subscription_list = MyLib::Chargebee.get_subscription_list(chargebee_customer_id: @user.chargebee_customer_id)
+      chargebee_subscription_list.each do |entry|
+        shipping_address = entry.subscription.shipping_address
+        billing_address = entry.customer.billing_address
+      end
+
+      shipping_mapping = address_mapping(type: "shipping")
+      payment_method_params = change_payment_method_params
+      shipping_mapping.each do |key1, key2|
+        payment_method_params["shipping_#{key1}"] = shipping_address.try(key2)
+      end
+
+      # Update billing address as the same as shipping address
+      if payment_method_params["same_as_shipping_address"]
+        billing_mapping = address_mapping(type: "billing")
+        billing_mapping.each do |key1, key2|
+          payment_method_params["billing_#{key1}"] = billing_address.try(key2)
+        end
+      end
+
+      begin
+        # Update billing address
+        @user.update!(payment_method_params)
+        # Update subscription
+        MyLib::Chargebee.update_customer_and_subscription(@user)
+
+        render json: {
+          status: true
+        }, status: :ok
+      rescue => e
+        Raven.capture_exception(e)
+        render json: {
+          error: e.message
+        }, status: :bad_request
+      end
+    end
   end
 
   # Route: /api/v1/user/apply_coupon
@@ -271,6 +311,20 @@ class Api::V1::UsersController < ApplicationController
       )
     end
 
+    def change_payment_method_params
+      params.permit(
+        :stripe_token,
+        :same_as_shipping_address,
+        :billing_first_name,
+        :billing_last_name,
+        :billing_street_address,
+        :billing_apt_suite,
+        :billing_city,
+        :billing_postal_code,
+        :billing_phone_number
+      )
+    end
+
     def update_password_params_valid?
       update_password_params[:password].present? &&
         update_password_params[:password_confirmation]
@@ -296,9 +350,30 @@ class Api::V1::UsersController < ApplicationController
       # update_delivery_address_params[:shipping_delivery_instructions].present?
     end
 
+    def change_payment_method_params_valid?
+      change_payment_method_params[:stripe_token].present? &&
+        change_payment_method_params.key?("same_as_shipping_address")
+    end
+
     def render_missed_params
       render json: {
         error: "Missed params!"
       }, status: :bad_request
+    end
+
+    def address_mapping(type:)
+      mapping = {
+        "first_name": "first_name",
+        "last_name": "last_name",
+        "street_address": "line1",
+        "apt_suite": "line2",
+        "city": "city",
+        "postal_code": "zip",
+      }
+
+      mapping[:delivery_instructions] = "line3" if type == "shipping"
+      mapping[:phone_number] = "phone" if type == "billing"
+
+      mapping
     end
 end
