@@ -606,6 +606,20 @@ module MyLib
           invoice_estimate_description: invoice_estimate_description
         }
       end
+
+      # Pause subscription
+      def pause_subscription(subscription_id:, params:)
+        result = ChargeBee::Subscription.pause(subscription_id, params)
+        {
+          status: true,
+          subscription: result.subscription
+        }
+      rescue StandardError => e
+        {
+          status: false,
+          error: e.message
+        }
+      end
     end
   end
 end
