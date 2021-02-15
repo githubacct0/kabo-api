@@ -82,12 +82,19 @@ class Api::V1::OnboardingController < ActionController::API
 
   # Create temp user
   def create
-    temp_user = TempUser.create({ temp_dogs_attributes: onboarding_params[:dogs] })
+    temp_user = TempUser.create!
+    temp_user.temp_dogs.create!(onboarding_params[:dogs])
 
     render json: {
       temp_user_id: temp_user.id,
       temp_dog_ids: temp_user.temp_dog_ids
     }, status: :ok
+  rescue => e
+    puts "Error: #{e.message}"
+
+    render json: {
+      error: e.message
+    }, status: :bad_request
   end
 
   # Update
