@@ -285,23 +285,27 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Method: GET
   # Get daily portions
   def daily_portions
-    portions = []
-    cooked_recipes = daily_portions_params[:cooked_recipes]
-    kibble_recipe = daily_portions_params[:kibble_recipe]
-    dog_name = daily_portions_params[:dog_name]
-    if kibble_recipe.present?
-      if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
-        portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
-      else
-        portions = MyLib::Account.only_kibble_recipe_daily_portions(name: dog_name)
-      end
+    unless daily_portions_params_valid?
+      render_missed_params
     else
-      portions = MyLib::Account.only_cooked_recipe_daily_portions(name: dog_name)
-    end
+      portions = []
+      cooked_recipes = daily_portions_params[:cooked_recipes]
+      kibble_recipe = daily_portions_params[:kibble_recipe]
+      dog_name = daily_portions_params[:dog_name]
+      if kibble_recipe.present?
+        if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
+          portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
+        else
+          portions = MyLib::Account.only_kibble_recipe_daily_portions(name: dog_name)
+        end
+      else
+        portions = MyLib::Account.only_cooked_recipe_daily_portions(name: dog_name)
+      end
 
-    render json: {
-      portions: portions
-    }, status: :ok
+      render json: {
+        portions: portions
+      }, status: :ok
+    end
   end
 
   # Route: /api/v1/user/subscriptions/meal_plan/estimate
@@ -388,6 +392,11 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     def daily_portions_params
       params.permit(:dog_name, :kibble_recipe, cooked_recipes: [])
+    end
+
+    def daily_portions_params_valid?
+      daily_portions_params[:dog_name].present? &&
+        ([:cooked_recipes, :kibble_recipe] & daily_portions_params.keys).any?
     end
 
     def estimate_meal_plan_params
