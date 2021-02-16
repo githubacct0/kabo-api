@@ -11,6 +11,97 @@ module Dogable
     enum weight_unit: [ :lbs, :kg ]
   end
 
+  class_methods do
+    # Get cooked recipes
+    def cooked_recipes
+      [
+        "Tender Chicken",
+        "Savoury Beef",
+        "Hearty Turkey",
+        "Luscious Lamb"
+      ].map { |name| get_recipe_details(name: name) }
+    end
+
+    # Get kibble recipes
+    def kibble_recipes
+      [
+        "Chicken",
+        "Turkey & Salmon",
+        "Duck"
+      ].map { |name| get_recipe_details(name: name) }
+    end
+
+    def get_recipe_details(name:)
+      kibble_image_url = Rails.configuration.recipe_images[:kibble]
+      case name
+      when "Tender Chicken"
+        {
+          name: "Tender Chicken",
+          recipe: "chicken",
+          image_url: Rails.configuration.recipe_images[:chicken],
+          description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken.",
+          new: false,
+          analysis: Constants::CHICKEN_ANALYSIS
+        }
+      when "Savoury Beef"
+        {
+          name: "Savoury Beef",
+          recipe: "beef",
+          image_url: Rails.configuration.recipe_images[:beef],
+          description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef.",
+          new: false,
+          analysis: Constants::BEEF_ANALYSIS
+        }
+      when "Hearty Turkey"
+        {
+          name: "Hearty Turkey",
+          recipe: "turkey",
+          image_url: Rails.configuration.recipe_images[:turkey],
+          description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
+          new: false,
+          analysis: Constants::TURKEY_ANALYSIS
+        }
+      when "Luscious Lamb"
+        {
+          name: "Luscious Lamb",
+          recipe: "lamb",
+          image_url: Rails.configuration.recipe_images[:lamb],
+          description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!",
+          new: true,
+          analysis: Constants::LAMB_ANALYSIS
+        }
+      when "Chicken"
+        {
+          name: "Chicken",
+          recipe: "chicken",
+          image_url: kibble_image_url,
+          description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+          new: false,
+          analysis: Constants::CHICKEN_KIBBLE_ANALYSIS
+        }
+      when "Turkey & Salmon"
+        {
+          name: "Turkey & Salmon",
+          recipe: "turkey+salmon",
+          image_url: kibble_image_url,
+          description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+          new: false,
+          analysis: Constants::TURKEY_SALMON_KIBBLE_ANALYSIS
+        }
+      when "Duck"
+        {
+          name: "Duck",
+          recipe: "duck",
+          image_url: kibble_image_url,
+          description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
+          new: false,
+          analysis: Constants::DUCK_KIBBLE_ANALYSIS
+        }
+      else {}
+      end
+    end
+  end
+
   def plan_units_v2(total_units = false, bypass_adjustment = false, adjustment_direction = nil)
     total_recipes = [beef_recipe, chicken_recipe, turkey_recipe, lamb_recipe].reject(&:blank?).size
 

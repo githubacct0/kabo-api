@@ -77,6 +77,13 @@ module KaboApi
       subscription_resume_app_key: "apposChn4Ra3STOgW"
     }
     config.facebook_access_token = ENV.fetch("FACEBOOK_ACCESS_TOKEN", "")
+    config.recipe_images = {
+      beef: "https://storage.googleapis.com/kabo-app/beef.png",
+      chicken: "https://storage.googleapis.com/kabo-app/chicken.png",
+      lamb: "https://storage.googleapis.com/kabo-app/lamb.png",
+      turkey: "https://storage.googleapis.com/kabo-app/turkey.png",
+      kibble: "https://storage.googleapis.com/kabo-app/kibble.png"
+    }
 
     config.autoload_paths << Rails.root.join("lib")
   end

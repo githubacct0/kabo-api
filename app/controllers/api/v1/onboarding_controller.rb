@@ -53,8 +53,8 @@ class Api::V1::OnboardingController < ActionController::API
   # Get recipes
   def recipes
     render json: {
-      cooked_recipes: MyLib::Account.cooked_recipes,
-      kibble_recipes: MyLib::Account.kibble_recipes
+      cooked_recipes: Dog.cooked_recipes,
+      kibble_recipes: Dog.kibble_recipes
     }, status: :ok
   end
 
