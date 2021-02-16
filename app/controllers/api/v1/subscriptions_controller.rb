@@ -19,6 +19,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     shipping_address = nil
     subscription_created_at = nil
     card = {}
+    dogs = @user.dogs
 
     MyLib::Chargebee.get_subscription_list(
       chargebee_customer_id: @user.chargebee_customer_id
@@ -31,6 +32,7 @@ class Api::V1::SubscriptionsController < ApplicationController
       invoice_estimate_description = invoice[:invoice_estimate_description]
 
       subscriptions[subscription.id] = {
+        dog_id: dogs.find { |dog| dog.chargebee_subscription_id == subscription.id }&.id,
         id: subscription.id,
         status: subscription.status,
         invoice_estimate_total: invoice_estimate_total,
@@ -102,7 +104,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     render json: {
       user: @user,
-      dogs: @user.dogs,
+      dogs: dogs,
       # Subscriptions
       subscriptions: subscriptions,
       subscription: subscription,
