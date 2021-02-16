@@ -276,8 +276,8 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Get meal plans
   def meal_plans
     render json: {
-      cooked_recipes: MyLib::Account.cooked_recipes,
-      kibble_recipes: MyLib::Account.kibble_recipes
+      cooked_recipes: Dog.cooked_recipes,
+      kibble_recipes: Dog.kibble_recipes
     }, status: :ok
   end
 

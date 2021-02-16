@@ -37,16 +37,30 @@ module MyLib
           card: payment_method_name,
           payment_status: transaction.type == "payment" ? "Paid" : transaction.type.humanize,
         }
-
+        items, descriptions = [], []
         if transaction.type == "payment"
           invoice = transaction.linked_invoices[0]
           schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) { |s| s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday) }
           invoice_delivery_date = schedule.next_occurrence(Time.zone.at(invoice.invoice_date)) + MyLib::Account.delivery_date_offset(subscription)
           delivery_date_text = invoice_delivery_date > Time.now ? "Delivers" : "Delivered"
 
-          history[:delivery_date] = "#{delivery_date_text} #{(invoice_delivery_date).strftime('%b %d')}",
-          history[:plan] = invoices[invoice.invoice_id].invoice.line_items.map { |li| li.entity_id && li.entity_id.include?("service-fee") ? nil : li.description }.compact.join(", "),
+          history[:delivery_date] = "#{delivery_date_text} #{(invoice_delivery_date).strftime('%b %d')}"
+          invoices[invoice.invoice_id].invoice.line_items.each do |line_item|
+            unless line_item.entity_id&.include?("service-fee")
+              descriptions << line_item.description
+              description = line_item.description
+              if description&.include? "Kibble Recipe"
+                recipe_name = description.split("Kibble Recipe")[0]&.strip
+                items << Dog.recipe_by_name(name: recipe_name)
+              elsif description&.include? "Recipe"
+                recipe_name = description.split("Recipe")[0]&.strip
+                items << Dog.get_recipe_details(name: recipe_name)
+              end
+            end
+          end
+          history[:plan] = descriptions.join(", ")
           history[:invoice_id] = "1#{invoice.invoice_id}"
+          history[:items] = items
         elsif transaction.type == "refund"
           credit_note = transaction.linked_credit_notes[0]
           history[:delivery_date] = nil
