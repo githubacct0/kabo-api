@@ -9,7 +9,6 @@ class User < ApplicationRecord
 
   # Relations
   has_many :dogs, dependent: :destroy
-  has_and_belongs_to_many :promotions
   accepts_nested_attributes_for :dogs
 
   before_update :create_customer_and_subscription
