@@ -233,14 +233,14 @@ module Dogable
   end
 
   # Get daily portions
-  def daily_portions
+  def daily_portions(type:)
     portions = []
     if only_cooked_recipe
-      portions = MyLib::Account.only_cooked_recipe_daily_portions(name: name)
+      portions = only_cooked_recipe_daily_portions(type: type)
     elsif mixed_cooked_and_kibble_recipe
-      portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
+      portions = mixed_cooked_and_kibble_recipe_daily_portions
     elsif only_kibble_recipe
-      portions = MyLib::Account.only_kibble_recipe_daily_portions(name: name)
+      portions = only_kibble_recipe_daily_portions
     end
 
     portions
@@ -406,7 +406,7 @@ module Dogable
   end
 
   # Get only kibble recipe daily portions
-  def only_kibble_recipe_daily_portions(name:)
+  def only_kibble_recipe_daily_portions
     [
       {
         title: "2 weeks worth",

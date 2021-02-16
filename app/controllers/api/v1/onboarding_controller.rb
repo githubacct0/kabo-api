@@ -66,7 +66,7 @@ class Api::V1::OnboardingController < ActionController::API
       dog_ids.each do |dog_id|
         temp_dog = TempDog.find_by(id: dog_id)
         if temp_dog.present?
-          daily_portions[dog_id] = temp_dog.daily_portions
+          daily_portions[dog_id] = temp_dog.daily_portions(type: "onboarding")
         end
       end
 
