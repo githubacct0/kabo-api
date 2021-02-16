@@ -288,23 +288,28 @@ class Api::V1::SubscriptionsController < ApplicationController
     unless daily_portions_params_valid?
       render_missed_params
     else
-      portions = []
-      cooked_recipes = daily_portions_params[:cooked_recipes]
-      kibble_recipe = daily_portions_params[:kibble_recipe]
-      dog_name = daily_portions_params[:dog_name]
-      if kibble_recipe.present?
-        if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
-          portions = MyLib::Account.mixed_cooked_and_kibble_recipe_daily_portions
-        else
-          portions = MyLib::Account.only_kibble_recipe_daily_portions(name: dog_name)
-        end
+      dog = Dog.find_by_id(daily_portions_params[:dog_id])
+      if dog.nil?
+        render json: {
+          error: "Dog does not exist!"
+        }, status: :not_found
       else
-        portions = MyLib::Account.only_cooked_recipe_daily_portions(name: dog_name)
-      end
+        cooked_recipes = daily_portions_params[:cooked_recipes]
+        kibble_recipe = daily_portions_params[:kibble_recipe]
+        if kibble_recipe.present?
+          if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
+            portions = dog.mixed_cooked_and_kibble_recipe_daily_portions(type: "frontend")
+          else
+            portions = dog.only_kibble_recipe_daily_portions(type: "frontend")
+          end
+        else
+          portions = dog.only_cooked_recipe_daily_portions(type: "frontend")
+        end
 
-      render json: {
-        portions: portions
-      }, status: :ok
+        render json: {
+          portions: portions
+        }, status: :ok
+      end
     end
   end
 
@@ -391,11 +396,11 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
 
     def daily_portions_params
-      params.permit(:dog_name, :kibble_recipe, cooked_recipes: [])
+      params.require(:subscription).permit(:dog_id, :kibble_recipe, cooked_recipes: [])
     end
 
     def daily_portions_params_valid?
-      daily_portions_params[:dog_name].present? &&
+      daily_portions_params[:dog_id].present? &&
         (["cooked_recipes", "kibble_recipe"] & daily_portions_params.keys).any?
     end
 

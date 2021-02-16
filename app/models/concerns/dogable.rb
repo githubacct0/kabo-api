@@ -348,4 +348,72 @@ module Dogable
 
     addons
   end
+
+  # Get only cooked recipe daily portions
+  def only_cooked_recipe_daily_portions(type:)
+    portions = [
+      {
+        title: "25% Kabo Diet",
+        description: "About 25% of #{name}'s daily caloric needs. Mix it in with their current food to give them the nutrients of fresh food at a more affordable price point!",
+        cooked_portion: 25,
+        portion_adjustment: nil
+      },
+      {
+        title: "100% Kabo Diet",
+        description: "A complete and balanced diet for #{name}. You will receive enough food for 100% of #{name}'s daily caloric needs, which is 1091 calories.",
+        cooked_portion: 100,
+        portion_adjustment: nil
+      }
+    ]
+    case type
+    when "onboarding" then portions
+    when "frontend"
+      higher_percent = (((plan_units_v2(true, false, "higher") - plan_units_v2(true, true)).to_f / plan_units_v2(true, true)).abs * 100).floor
+      percent = 25 + higher_percent
+      if percent < 100
+        portions.insert(1, {
+          title: "#{percent}% Kabo Diet",
+          description: "For those who want a little more Kabo to their food",
+          cooked_portion: 25,
+          portion_adjustment: "higher"
+        })
+
+        portions << {
+          title: "Full Kabo Diet + #{higher_percent}% More",
+          description: "For dogs who need to gain back to a healthy weight",
+          cooked_portion: 100,
+          portion_adjustment: "higher"
+        }
+      end
+    else []
+    end
+  end
+
+  # Get mixed cooked and kibble recipe daily portions
+  def mixed_cooked_and_kibble_recipe_daily_portions
+    [
+      {
+        title: "25% cooked, 75% kibble",
+        cooked_portion: 25,
+        kibble_portion: 75
+      },
+      {
+        title: "50% cooked, 50% kibble",
+        cooked_portion: 50,
+        kibble_portion: 50
+      }
+    ]
+  end
+
+  # Get only kibble recipe daily portions
+  def only_kibble_recipe_daily_portions(name:)
+    [
+      {
+        title: "2 weeks worth",
+        description: "You'll get enough kibble for #{name} to last 2 weeks. Feeding instructions will be provided.",
+        kibble_portion: 100,
+        plan_interval: 2
+      }
+    ]
+  end
 end
