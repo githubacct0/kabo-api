@@ -298,9 +298,9 @@ class Api::V1::SubscriptionsController < ApplicationController
         kibble_recipe = daily_portions_params[:kibble_recipe]
         if kibble_recipe.present?
           if (cooked_recipes & ["beef", "chicken", "lamb", "turkey"]).any?
-            portions = dog.mixed_cooked_and_kibble_recipe_daily_portions(type: "frontend")
+            portions = dog.mixed_cooked_and_kibble_recipe_daily_portions
           else
-            portions = dog.only_kibble_recipe_daily_portions(type: "frontend")
+            portions = dog.only_kibble_recipe_daily_portions
           end
         else
           portions = dog.only_cooked_recipe_daily_portions(type: "frontend")
