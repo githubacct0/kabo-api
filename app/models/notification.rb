@@ -4,5 +4,5 @@ class Notification < ApplicationRecord
   belongs_to :user
 
   enum category: [ :general, :delivery ]
-  enum action: [:none, :view_settings, :unpause, :reactivate, :track_delivery]
+  enum action: [:no_action, :view_settings, :unpause, :reactivate, :track_delivery]
 end
