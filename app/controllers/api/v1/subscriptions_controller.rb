@@ -69,10 +69,10 @@ class Api::V1::SubscriptionsController < ApplicationController
         }
         if subscription_phase[:status] == "waiting_for_resume_shipment"
           # Get payment amount
-          transaction_list_query[:date[between]] = [active_subscription.activated_at, active_subscription.activated_at + 2.days]
+          transaction_list_query["date[between]"] = [active_subscription.activated_at, active_subscription.activated_at + 2.days]
         else
           # Get payment amount
-          transaction_list_query[:date[between]] = [subscription_created_at, subscription_created_at + 2.days]
+          transaction_list_query["date[between]"] = [subscription_created_at, subscription_created_at + 2.days]
         end
 
         transaction_list = ChargeBee::Transaction.list(transaction_list_query)
