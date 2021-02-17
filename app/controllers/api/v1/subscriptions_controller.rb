@@ -7,11 +7,6 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Method: GET
   # Get user's subscriptions such as next delivery, plans, delivery frequencies
   def index
-    # Update qa_jump_by_days
-    if ["kabo-app", "kabo-beta"].exclude?(Rails.configuration.heroku_app_name) && params[:qa_jump_by_days].present?
-      @user.update_columns(qa_jump_by_days: params[:qa_jump_by_days])
-    end
-
     # Get Subscriptions
     subscriptions = {}
     subscription = {}
