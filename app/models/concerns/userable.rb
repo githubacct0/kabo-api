@@ -22,6 +22,11 @@ module Userable
     end
   end
 
+  # Get id of dog of subscription
+  def subscription_dog_id(subscription_id:)
+    dogs.find { |dog| dog.chargebee_subscription_id == subscription_id }&.id
+  end
+
   class_methods do
     REGEX_PATTERN = /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$/
     def is_email_valid?(email)

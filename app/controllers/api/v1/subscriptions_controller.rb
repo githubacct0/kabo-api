@@ -8,12 +8,9 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Get user's subscriptions such as next delivery, plans, delivery frequencies
   def index
     # Get Subscriptions
-    subscriptions = {}
-    subscription = {}
-    active_subscription = nil
-    shipping_address = nil
-    subscription_created_at = nil
-    card = {}
+    subscriptions, subscription, card = {}, {}, {}
+    active_subscription, shipping_address, subscription_created_at, subscription_phase, payment_method_icon, payment_method_details = Array.new(6, nil)
+    total_paid = 0
     dogs = @user.dogs
 
     MyLib::Chargebee.get_subscription_list(
@@ -27,7 +24,7 @@ class Api::V1::SubscriptionsController < ApplicationController
       invoice_estimate_description = invoice[:invoice_estimate_description]
 
       subscriptions[subscription.id] = {
-        dog_id: dogs.find { |dog| dog.chargebee_subscription_id == subscription.id }&.id,
+        dog_id: @user.subscription_dog_id(subscription_id: subscription.id),
         id: subscription.id,
         status: subscription.status,
         invoice_estimate_total: invoice_estimate_total,
@@ -44,37 +41,29 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     @user.update_columns(subscription_phase_status: "normal_user_scheduled_order") if (["paused", "cancelled"] & subscription_statuses).any?
 
-    subscription_phase = nil
-    payment_method_icon = nil
-    payment_method_details = nil
-    total_paid = 0
-
     if (["active", "future"] & subscription_statuses).any?
       subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
       @user.update_columns(subscription_phase_status: subscription_phase[:status]) if @user.subscription_phase_status != subscription_phase[:status]
 
-      all_active_or_future_subscriptions_are_custom = (subscription_statuses.count { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).size)
+      all_active_or_future_subscriptions_are_custom = subscription_statuses.count { |x| ["active", "future", "paused"].include?(x) } == @user.dogs.where(has_custom_plan: true).size
 
-      if subscription_phase[:status] == "waiting_for_trial_shipment" || subscription_phase[:status] == "waiting_for_resume_shipment"
+      if ["waiting_for_trial_shipment", "waiting_for_resume_shipment"].include? subscription_phase[:status]
         amounts_paid = []
+        # Get payment amount
         transaction_list_query = {
           "type[in]" => "['payment']",
           "customer_id[is]" => @user.chargebee_customer_id
         }
-        if subscription_phase[:status] == "waiting_for_resume_shipment"
-          # Get payment amount
-          transaction_list_query["date[between]"] = [active_subscription.activated_at, active_subscription.activated_at + 2.days]
-        else
-          # Get payment amount
-          transaction_list_query["date[between]"] = [subscription_created_at, subscription_created_at + 2.days]
-        end
-
+        # Set date[between] option
+        transaction_list_query["date[between]"] = subscription_phase[:status] == "waiting_for_resume_shipment" ?
+            [active_subscription.activated_at, active_subscription.activated_at + 2.days] :
+            [subscription_created_at, subscription_created_at + 2.days]
         transaction_list = ChargeBee::Transaction.list(transaction_list_query)
 
         transaction_list.each do |entry|
           transaction = entry.transaction
-          amounts_paid.push(transaction.amount)
+          amounts_paid << transaction.amount
           payment_method_icon = case transaction.payment_method
                                 when "paypal_express_checkout" then "paypal-logo"
                                 when "apple_pay" then "apple-pay-logo"
@@ -88,14 +77,11 @@ class Api::V1::SubscriptionsController < ApplicationController
       end
     end
     subscription_start_date = MyLib::Icecube.subscription_start_date
-    purchase_by_date = (Time.now + 2.days).strftime("%b %e, %Y")
-    if Time.now + 2.days > (Time.zone.at(subscription_start_date))
-      purchase_by_date = Time.zone.at(subscription_start_date).strftime("%b %e")
-    end
-    default_delivery_date = subscription_start_date + 7.days
-    if !shipping_address.zip.nil?
-      default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip)
-    end
+    after_2days = Time.now + 2.days
+    purchase_by_date = (after_2days > Time.zone.at(subscription_start_date)) ? Time.zone.at(subscription_start_date).strftime("%b %e") : after_2days.strftime("%b %e, %Y")
+    default_delivery_date = shipping_address.zip.present? ?
+      subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip) :
+      subscription_start_date + 7.days
 
     render json: {
       user: @user,
