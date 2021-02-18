@@ -100,6 +100,11 @@ class Api::V1::SubscriptionsController < ApplicationController
         subscription_start_date + 7.days
       end
 
+    # Get next delivery date
+    starting_date = active_subscription ? active_subscription.next_billing_at : nil
+    delivery_starting_date_options = @user.delivery_starting_date_options(subscription)
+    next_delivery_date_showable = subscription_phase[:status].include?("normal_user") && starting_date <= delivery_starting_date_options.last[:value]
+
     render json: {
       user: @user,
       dogs: dogs,
@@ -114,14 +119,20 @@ class Api::V1::SubscriptionsController < ApplicationController
       total_paid: total_paid,
       purchase_by_date: purchase_by_date,
       default_delivery_date: default_delivery_date,
-      starting_date: active_subscription ? active_subscription.next_billing_at : nil,
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
       # Next occurencies for pause plans
       next_occurrencies: MyLib::Icecube.subscription_next_occurrencies,
       skipped_first_box: @user.skipped_first_box,
-      # amount of food
+      # Amount of food
       amount_of_food_options: @user.amount_of_food_options,
-      amount_of_food: @user.amount_of_food
+      amount_of_food: @user.amount_of_food,
+      # How often
+      how_often_options: @user.how_often_options,
+      how_often: @user.how_often,
+      # Next delivery date
+      starting_date: starting_date,
+      next_delivery_date_showable: next_delivery_date_showable,
+      delivery_starting_date_options: delivery_starting_date_options
     }, status: :ok
   end
 

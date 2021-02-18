@@ -39,8 +39,6 @@ class User < ApplicationRecord
     :alt_email,
     :alt_postal_code,
     :confirm_password,
-    :how_often,
-    :starting_date,
     :fbc,
     :fbp
 
@@ -165,21 +163,17 @@ class User < ApplicationRecord
     (dogs.size == 1 && !dogs.first.topper_available) ? 4 : 2
   end
 
-  def how_often_options
-    if trial_length == 4 then [["every 4 weeks", "4_week-delay"], ["every 6 weeks", "6_week-delay"], ["every 8 weeks", "8_week-delay"], ["every 12 weeks (3 months)", "12_week-delay"], ["every 26 weeks (6 months)", "26_week-delay"]]
-    else [["every 2 weeks", "2_week-delay"], ["every 4 weeks", "4_week-delay"], ["every 6 weeks", "6_week-delay"], ["every 8 weeks", "8_week-delay"], ["every 12 weeks (3 months)", "12_week-delay"], ["every 26 weeks (6 months)", "26_week-delay"]]
-    end
-  end
-
   def delivery_starting_date_options(subscription)
     # Regular Subscription Customer
     schedule = MyLib::Icecube.subscription_schedule("2020-01-03 09:00:00", 2)
     current_time = Time.zone.now
     schedule.next_occurrences(3, current_time).map do |date|
       _date = (date + 3.hours + MyLib::Account.delivery_date_offset(subscription)).strftime("%b %e")
-      _date += " (Potential Delivery Delays)" if date.to_i == 1608300000 # Fri, 18 Dec 2020 15:00:00 +0100
 
-      [_date, (date + 3.hours).to_i]
+      {
+        label: _date,
+        value: (date + 3.hours).to_i
+      }
     end
   end
 
