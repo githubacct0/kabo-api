@@ -400,6 +400,55 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
   end
 
+  # Route: /api/v1/user/subscriptions/skip_delivery
+  # Method: POST
+  # Skip delivery
+  def skip_delivery
+    if skip_delivery_params_valid?
+      dog = Dog.find_by_id(skip_delivery_params[:dog_id])
+      if dog.present?
+        active_subscription = {}
+        MyLib::Chargebee.get_subscription_list(
+          chargebee_customer_id: @user.chargebee_customer_id
+        ).each do |chargebee_subscription|
+          subscription = chargebee_subscription.subscription
+          is_active = ["active", "future"].include?(subscription.status) && subscription.id == dog.chargebee_subscription_id
+          active_subscription = subscription if is_active
+        end
+
+        support = "Could not skip delivery date, please try again or contact support@kabo.co"
+
+        if active_subscription.present?
+          subscription_phase = AccountHelper.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
+
+          if @user.subscription_phase_status == "in_trial"
+            if MyLib::Chargebee.update_subscription_start_date(@user, subscription_phase[:skip_date_billing].to_i)
+              @user.update_columns(skipped_first_box: true)
+
+              UserMailer.with(user: @user, subscription_phase: subscription_phase).skip_box.deliver_now
+
+              render json: {
+                skip_until: subscription_phase[:skip_date].strftime("%B %e")
+              }, status: :ok
+            else
+              render_error(support, :bad_request)
+            end
+          else
+            render_error(support, :bad_request)
+          end
+        else
+          render_error(support, :bad_request)
+        end
+      else
+        render json: {
+          error: "Dog not exist!"
+        }, status: :not_found
+      end
+    else
+      render_missed_params
+    end
+  end
+
   private
     def pause_subscriptions_params
       params.require(:subscription).permit(:dog_id, :pause_until)
@@ -447,5 +496,13 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     def cancel_subscriptions_params_valid?
       cancel_subscriptions_params[:dog_id].present?
+    end
+
+    def skip_delivery_params
+      params.require(:subscription).permit(:dog_id)
+    end
+
+    def skip_delivery_params_valid?
+      skip_delivery_params[:dog_id].present?
     end
 end
