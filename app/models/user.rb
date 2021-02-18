@@ -24,7 +24,6 @@ class User < ApplicationRecord
     :shipping_postal_code,
     :shipping_phone_number,
     :shipping_delivery_instructions,
-    :same_billing_address,
     :billing_first_name,
     :billing_last_name,
     :billing_street_address,

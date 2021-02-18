@@ -232,7 +232,7 @@ class Api::V1::UsersController < ApplicationController
 
       begin
         # Update billing address
-        @user.update!(payment_method_params)
+        @user.update!(payment_method_params.except(:same_as_shipping_address))
         # Update subscription
         MyLib::Chargebee.update_customer_and_subscription(@user)
 
