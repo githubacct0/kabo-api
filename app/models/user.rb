@@ -158,10 +158,7 @@ class User < ApplicationRecord
 
   def delivery_starting_date_options(subscription)
     # Regular Subscription Customer
-    schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 09:00:00")) do |s|
-      s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-    end
-
+    schedule = MyLib::Icecube.subscription_schedule("2020-01-03 09:00:00", 2)
     current_time = Time.zone.now
 
     if Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && !qa_jump_by_days.nil? && !qa_jump_by_days.zero?
