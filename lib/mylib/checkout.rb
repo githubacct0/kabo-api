@@ -33,7 +33,7 @@ module MyLib
         else
           start_date = "2020-01-03 12:00:00"
         end
-        subscription_start_date = MyLib::Icecube.subscription_start_date(start_date)
+        subscription_start_date = MyLib::Icecube.subscription_start_date(start_date, 2)
 
         subscription_params = {
           plan_id: user_chargebee_plan_interval,

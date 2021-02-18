@@ -7,18 +7,10 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Method: GET
   # Get user's subscriptions such as next delivery, plans, delivery frequencies
   def index
-    # Update qa_jump_by_days
-    if ["kabo-app", "kabo-beta"].exclude?(Rails.configuration.heroku_app_name) && params[:qa_jump_by_days].present?
-      @user.update_columns(qa_jump_by_days: params[:qa_jump_by_days])
-    end
-
     # Get Subscriptions
-    subscriptions = {}
-    subscription = {}
-    active_subscription = nil
-    shipping_address = nil
-    subscription_created_at = nil
-    card = {}
+    subscriptions, subscription, card = {}, {}, {}
+    active_subscription, shipping_address, subscription_created_at, subscription_phase, payment_method_icon, payment_method_details = Array.new(6, nil)
+    total_paid = 0
     dogs = @user.dogs
 
     MyLib::Chargebee.get_subscription_list(
@@ -32,7 +24,7 @@ class Api::V1::SubscriptionsController < ApplicationController
       invoice_estimate_description = invoice[:invoice_estimate_description]
 
       subscriptions[subscription.id] = {
-        dog_id: dogs.find { |dog| dog.chargebee_subscription_id == subscription.id }&.id,
+        dog_id: @user.subscription_dog_id(subscription_id: subscription.id),
         id: subscription.id,
         status: subscription.status,
         invoice_estimate_total: invoice_estimate_total,
@@ -49,58 +41,69 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     @user.update_columns(subscription_phase_status: "normal_user_scheduled_order") if (["paused", "cancelled"] & subscription_statuses).any?
 
-    subscription_phase = nil
-    payment_method_icon = nil
-    payment_method_details = nil
-    total_paid = 0
-
     if (["active", "future"] & subscription_statuses).any?
       subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
       @user.update_columns(subscription_phase_status: subscription_phase[:status]) if @user.subscription_phase_status != subscription_phase[:status]
 
-      all_active_or_future_subscriptions_are_custom = (subscription_statuses.count { |x| x == "active" || x == "future" || x == "paused" } == @user.dogs.where(has_custom_plan: true).size)
+      all_active_or_future_subscriptions_are_custom = subscription_statuses.count { |x| ["active", "future", "paused"].include?(x) } == @user.dogs.where(has_custom_plan: true).size
 
-      if subscription_phase[:status] == "waiting_for_trial_shipment" || subscription_phase[:status] == "waiting_for_resume_shipment"
+      if ["waiting_for_trial_shipment", "waiting_for_resume_shipment"].include? subscription_phase[:status]
         amounts_paid = []
+        # Get payment amount
         transaction_list_query = {
           "type[in]" => "['payment']",
           "customer_id[is]" => @user.chargebee_customer_id
         }
-        if subscription_phase[:status] == "waiting_for_resume_shipment"
-          # Get payment amount
-          transaction_list_query["date[between]"] = [active_subscription.activated_at, active_subscription.activated_at + 2.days]
-        else
-          # Get payment amount
-          transaction_list_query["date[between]"] = [subscription_created_at, subscription_created_at + 2.days]
-        end
-
+        # Set date[between] option
+        transaction_list_query["date[between]"] =
+          if subscription_phase[:status] == "waiting_for_resume_shipment"
+            [active_subscription.activated_at, active_subscription.activated_at + 2.days]
+          else
+            [subscription_created_at, subscription_created_at + 2.days]
+          end
         transaction_list = ChargeBee::Transaction.list(transaction_list_query)
 
         transaction_list.each do |entry|
           transaction = entry.transaction
-          amounts_paid.push(transaction.amount)
-          payment_method_icon = case transaction.payment_method
-                                when "paypal_express_checkout" then "paypal-logo"
-                                when "apple_pay" then "apple-pay-logo"
-                                else "generic-cc"
-          end
+          amounts_paid << transaction.amount
+          payment_method_icon =
+            case transaction.payment_method
+            when "paypal_express_checkout" then "paypal-logo"
+            when "apple_pay" then "apple-pay-logo"
+            else "generic-cc"
+            end
 
-          payment_method_details = ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method) ? "" : "Card ending in #{transaction.masked_card_number.last(4)}"
+          payment_method_details =
+            if ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method)
+              nil
+            else
+              "Card ending in #{transaction.masked_card_number.last(4)}"
+            end
         end
 
         total_paid = Money.new(amounts_paid.sum).format
       end
     end
     subscription_start_date = MyLib::Icecube.subscription_start_date
-    purchase_by_date = (Time.now + 2.days).strftime("%b %e, %Y")
-    if Time.now + 2.days > (Time.zone.at(subscription_start_date))
-      purchase_by_date = Time.zone.at(subscription_start_date).strftime("%b %e")
-    end
-    default_delivery_date = subscription_start_date + 7.days
-    if !shipping_address.zip.nil?
-      default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip)
-    end
+    after_2days = Time.now + 2.days
+    purchase_by_date =
+      if after_2days > Time.zone.at(subscription_start_date)
+        Time.zone.at(subscription_start_date).strftime("%b %e")
+      else
+        after_2days.strftime("%b %e, %Y")
+      end
+    default_delivery_date =
+      if shipping_address.zip.present?
+        subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip)
+      else
+        subscription_start_date + 7.days
+      end
+
+    # Get next delivery date
+    starting_date = active_subscription ? active_subscription.next_billing_at : nil
+    delivery_starting_date_options = @user.delivery_starting_date_options(subscription)
+    next_delivery_date_showable = subscription_phase[:status].include?("normal_user") && starting_date <= delivery_starting_date_options.last[:value]
 
     render json: {
       user: @user,
@@ -116,11 +119,20 @@ class Api::V1::SubscriptionsController < ApplicationController
       total_paid: total_paid,
       purchase_by_date: purchase_by_date,
       default_delivery_date: default_delivery_date,
-      starting_date: active_subscription ? active_subscription.next_billing_at : nil,
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
       # Next occurencies for pause plans
       next_occurrencies: MyLib::Icecube.subscription_next_occurrencies,
-      skipped_first_box: @user.skipped_first_box
+      skipped_first_box: @user.skipped_first_box,
+      # Amount of food
+      amount_of_food_options: @user.amount_of_food_options,
+      amount_of_food: @user.amount_of_food,
+      # How often
+      how_often_options: @user.how_often_options,
+      how_often: @user.how_often,
+      # Next delivery date
+      starting_date: starting_date,
+      next_delivery_date_showable: next_delivery_date_showable,
+      delivery_starting_date_options: delivery_starting_date_options
     }, status: :ok
   end
 

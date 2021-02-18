@@ -39,9 +39,6 @@ class User < ApplicationRecord
     :alt_email,
     :alt_postal_code,
     :confirm_password,
-    :amount_of_food,
-    :how_often,
-    :starting_date,
     :fbc,
     :fbp
 
@@ -92,10 +89,32 @@ class User < ApplicationRecord
     end
   end
 
+  # Get amount of food per dog
   def amount_of_food
     if chargebee_plan_interval.include?("2_weeks") then "2_weeks"
     elsif chargebee_plan_interval.include?("4_weeks") then "4_weeks"
     else nil
+    end
+  end
+
+  # Get amount of food options
+  def amount_of_food_options
+    _2_weeks_of_food = {
+      label: "2 weeks of food",
+      value: "2_weeks"
+    }
+    _4_weeks_of_food = {
+      label: "4 weeks of food",
+      value: "4_weeks"
+    }
+
+    if trial_length == 4
+      [ _4_weeks_of_food ]
+    else
+      [
+        _2_weeks_of_food,
+        _4_weeks_of_food
+      ]
     end
   end
 
@@ -144,31 +163,18 @@ class User < ApplicationRecord
     (dogs.size == 1 && !dogs.first.topper_available) ? 4 : 2
   end
 
-  def amount_of_food_options
-    if trial_length == 4 then [["4 weeks of food", "4_weeks"]]
-    else [["2 weeks of food", "2_weeks"], ["4 weeks of food", "4_weeks"]]
-    end
-  end
-
-  def how_often_options
-    if trial_length == 4 then [["every 4 weeks", "4_week-delay"], ["every 6 weeks", "6_week-delay"], ["every 8 weeks", "8_week-delay"], ["every 12 weeks (3 months)", "12_week-delay"], ["every 26 weeks (6 months)", "26_week-delay"]]
-    else [["every 2 weeks", "2_week-delay"], ["every 4 weeks", "4_week-delay"], ["every 6 weeks", "6_week-delay"], ["every 8 weeks", "8_week-delay"], ["every 12 weeks (3 months)", "12_week-delay"], ["every 26 weeks (6 months)", "26_week-delay"]]
-    end
-  end
-
   def delivery_starting_date_options(subscription)
     # Regular Subscription Customer
-    schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 09:00:00")) do |s|
-      s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-    end
-
+    schedule = MyLib::Icecube.subscription_schedule("2020-01-03 09:00:00", 2)
     current_time = Time.zone.now
+    schedule.next_occurrences(3, current_time).map do |date|
+      _date = (date + 3.hours + MyLib::Account.delivery_date_offset(subscription)).strftime("%b %e")
 
-    if Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && !qa_jump_by_days.nil? && !qa_jump_by_days.zero?
-      current_time = Time.zone.now + qa_jump_by_days.days
+      {
+        label: _date,
+        value: (date + 3.hours).to_i
+      }
     end
-
-    schedule.next_occurrences(3, current_time).map { |date| [((date + 3.hours) + MyLib::Account.delivery_date_offset(subscription)).strftime("%b %e") + (date.to_i == 1608300000 ? " (Potential Delivery Delays)" : ""), (date + 3.hours).to_i] }
   end
 
   def create_customer_and_subscription
