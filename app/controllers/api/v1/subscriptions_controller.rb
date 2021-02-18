@@ -9,7 +9,8 @@ class Api::V1::SubscriptionsController < ApplicationController
   def index
     # Get Subscriptions
     subscriptions, subscription, card = {}, {}, {}
-    active_subscription, shipping_address, subscription_created_at, subscription_phase, payment_method_icon, payment_method_details = Array.new(6, nil)
+    active_subscription, shipping_address, subscription_phase = {}, {}, {}
+    subscription_created_at, payment_method_icon, payment_method_details = Array.new(3, nil)
     total_paid = 0
     dogs = @user.dogs
 
@@ -101,9 +102,14 @@ class Api::V1::SubscriptionsController < ApplicationController
       end
 
     # Get next delivery date
-    starting_date = active_subscription ? active_subscription.next_billing_at : nil
     delivery_starting_date_options = @user.delivery_starting_date_options(subscription)
-    next_delivery_date_showable = subscription_phase[:status].include?("normal_user") && starting_date <= delivery_starting_date_options.last[:value]
+    if active_subscription.present?
+      starting_date = active_subscription.next_billing_at
+      next_delivery_date_showable = subscription_phase.dig(:status)&.include?("normal_user") && starting_date <= delivery_starting_date_options.last[:value]
+    else
+      starting_date = nil
+      next_delivery_date_showable = false
+    end
 
     render json: {
       user: @user,
