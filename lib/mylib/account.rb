@@ -80,10 +80,6 @@ module MyLib
       def subscription_phase(subscription, skipped_first_box, mock_run_variables = {}, user = nil)
         current_time = Time.zone.now
 
-        if Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && user && !user.qa_jump_by_days.nil? && !user.qa_jump_by_days.zero?
-          current_time = Time.zone.now + user.qa_jump_by_days.days
-        end
-
         if subscription
           plan_weeks = subscription.plan_id.split("_")[2].to_i.weeks
 
