@@ -190,9 +190,22 @@ class Dog < ApplicationRecord
   class << self
     # Get breed list
     def breeds
-      Breed.find_each.reject { |breed| breed.name&.downcase == "unknown" }.map { |breed|
-        { label: breed.name, value: breed.id }
-      }
+      _breeds = []
+      Breed.where.not("lower(name) LIKE ?", "%unknown%").find_each do |breed|
+        _breeds << { label: breed.name, value: breed.id }
+      end
+
+      _breeds
+    end
+
+    # Get unknown breed list
+    def unknown_breeds
+      _unknown_breeds = []
+      Breed.where("lower(name) LIKE ?", "%unknown%").find_each do |breed|
+        _unknown_breeds << { label: breed.name, value: breed.id }
+      end
+
+      _unknown_breeds
     end
 
     # Get age list
