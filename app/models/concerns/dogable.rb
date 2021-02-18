@@ -434,10 +434,10 @@ module Dogable
 
     # RECURRING ADDONS
     user_chargebee_plan_interval = user.chargebee_plan_interval
-    beef_recipe && addons.push(subscription_recurring_addon("beef", user_chargebee_plan_interval, dog_plan_units_v2))
-    chicken_recipe && addons.push(subscription_recurring_addon("chicken", user_chargebee_plan_interval, dog_plan_units_v2))
-    turkey_recipe && addons.push(subscription_recurring_addon("turkey", user_chargebee_plan_interval, dog_plan_units_v2))
-    lamb_recipe && addons.push(subscription_recurring_addon("lamb", user_chargebee_plan_interval, dog_plan_units_v2))
+    beef_recipe && addons.push(subscription_recurring_addon("beef", user_chargebee_plan_interval, plan_units_v2))
+    chicken_recipe && addons.push(subscription_recurring_addon("chicken", user_chargebee_plan_interval, plan_units_v2))
+    turkey_recipe && addons.push(subscription_recurring_addon("turkey", user_chargebee_plan_interval, plan_units_v2))
+    lamb_recipe && addons.push(subscription_recurring_addon("lamb", user_chargebee_plan_interval, plan_units_v2))
 
     kibble_recipe.present? && addons.push({
       id: "#{kibble_recipe}_kibble_#{user_chargebee_plan_interval}",
