@@ -160,12 +160,12 @@ class User < ApplicationRecord
     # Regular Subscription Customer
     schedule = MyLib::Icecube.subscription_schedule("2020-01-03 09:00:00", 2)
     current_time = Time.zone.now
+    schedule.next_occurrences(3, current_time).map do |date|
+      _date = (date + 3.hours + MyLib::Account.delivery_date_offset(subscription)).strftime("%b %e")
+      _date += " (Potential Delivery Delays)" if date.to_i == 1608300000 # Fri, 18 Dec 2020 15:00:00 +0100
 
-    if Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && !qa_jump_by_days.nil? && !qa_jump_by_days.zero?
-      current_time = Time.zone.now + qa_jump_by_days.days
+      [_date, (date + 3.hours).to_i]
     end
-
-    schedule.next_occurrences(3, current_time).map { |date| [((date + 3.hours) + MyLib::Account.delivery_date_offset(subscription)).strftime("%b %e") + (date.to_i == 1608300000 ? " (Potential Delivery Delays)" : ""), (date + 3.hours).to_i] }
   end
 
   def create_customer_and_subscription
