@@ -48,8 +48,7 @@ class Api::V1::UsersController < ApplicationController
 
               schedule_to_verify_starting_date_timestamps = schedule_to_verify_starting_date.next_occurrences(3, Time.zone.now).map { |date| date.to_i }
 
-              if schedule_to_verify_starting_date_timestamps.include?(starting_date) ||
-                (Rails.configuration.heroku_app_name != "kabo-app" && Rails.configuration.heroku_app_name != "kabo-beta" && @user.qa_jump_by_days > 0)
+              if schedule_to_verify_starting_date_timestamps.include? starting_date
                 ChargeBee::Subscription.change_term_end(dog.chargebee_subscription_id, {
                   term_ends_at: starting_date
                 })
