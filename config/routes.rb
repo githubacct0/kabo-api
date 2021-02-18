@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       post "/user/subscriptions/portions" => "subscriptions#daily_portions"
       post "/user/subscriptions/meal_plan/estimate" => "subscriptions#estimate_meal_plan"
       put "/user/subscriptions/meal_plan" => "subscriptions#update_meal_plan"
+      post "/user/subscriptions/skip_delivery" => "subscriptions#skip_delivery"
 
       ## Account tab
       get "/user/details" => "users#details"

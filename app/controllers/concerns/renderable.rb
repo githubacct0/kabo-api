@@ -8,4 +8,10 @@ module Renderable
       error: "Missed params!"
     }, status: :bad_request
   end
+
+  def render_error(error, status)
+    render json: {
+      error: error
+    }, status: status
+  end
 end
