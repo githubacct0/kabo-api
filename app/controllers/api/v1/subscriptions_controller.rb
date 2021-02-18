@@ -56,21 +56,30 @@ class Api::V1::SubscriptionsController < ApplicationController
           "customer_id[is]" => @user.chargebee_customer_id
         }
         # Set date[between] option
-        transaction_list_query["date[between]"] = subscription_phase[:status] == "waiting_for_resume_shipment" ?
-            [active_subscription.activated_at, active_subscription.activated_at + 2.days] :
+        transaction_list_query["date[between]"] =
+          if subscription_phase[:status] == "waiting_for_resume_shipment"
+            [active_subscription.activated_at, active_subscription.activated_at + 2.days]
+          else
             [subscription_created_at, subscription_created_at + 2.days]
+          end
         transaction_list = ChargeBee::Transaction.list(transaction_list_query)
 
         transaction_list.each do |entry|
           transaction = entry.transaction
           amounts_paid << transaction.amount
-          payment_method_icon = case transaction.payment_method
-                                when "paypal_express_checkout" then "paypal-logo"
-                                when "apple_pay" then "apple-pay-logo"
-                                else "generic-cc"
-          end
+          payment_method_icon =
+            case transaction.payment_method
+            when "paypal_express_checkout" then "paypal-logo"
+            when "apple_pay" then "apple-pay-logo"
+            else "generic-cc"
+            end
 
-          payment_method_details = ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method) ? "" : "Card ending in #{transaction.masked_card_number.last(4)}"
+          payment_method_details =
+            if ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method)
+              nil
+            else
+              "Card ending in #{transaction.masked_card_number.last(4)}"
+            end
         end
 
         total_paid = Money.new(amounts_paid.sum).format
@@ -78,10 +87,18 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
     subscription_start_date = MyLib::Icecube.subscription_start_date
     after_2days = Time.now + 2.days
-    purchase_by_date = (after_2days > Time.zone.at(subscription_start_date)) ? Time.zone.at(subscription_start_date).strftime("%b %e") : after_2days.strftime("%b %e, %Y")
-    default_delivery_date = shipping_address.zip.present? ?
-      subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip) :
-      subscription_start_date + 7.days
+    purchase_by_date =
+      if after_2days > Time.zone.at(subscription_start_date)
+        Time.zone.at(subscription_start_date).strftime("%b %e")
+      else
+        after_2days.strftime("%b %e, %Y")
+      end
+    default_delivery_date =
+      if shipping_address.zip.present?
+        subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip)
+      else
+        subscription_start_date + 7.days
+      end
 
     render json: {
       user: @user,
