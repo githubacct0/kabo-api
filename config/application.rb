@@ -37,6 +37,7 @@ module KaboApi
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    config.time_zone = "Eastern Time (US & Canada)"
     config.chargebee = {
       api_key: ENV.fetch("CHARGEBEE_API_KEY", ""),
       site: ENV.fetch("CHARGEBEE_SITE", "")
