@@ -39,7 +39,6 @@ class User < ApplicationRecord
     :alt_email,
     :alt_postal_code,
     :confirm_password,
-    :amount_of_food,
     :how_often,
     :starting_date,
     :fbc,
@@ -92,10 +91,32 @@ class User < ApplicationRecord
     end
   end
 
+  # Get amount of food per dog
   def amount_of_food
     if chargebee_plan_interval.include?("2_weeks") then "2_weeks"
     elsif chargebee_plan_interval.include?("4_weeks") then "4_weeks"
     else nil
+    end
+  end
+
+  # Get amount of food options
+  def amount_of_food_options
+    _2_weeks_of_food = {
+      label: "2 weeks of food",
+      value: "2_weeks"
+    }
+    _4_weeks_of_food = {
+      label: "4 weeks of food",
+      value: "4_weeks"
+    }
+
+    if trial_length == 4
+      [ _4_weeks_of_food ]
+    else
+      [
+        _2_weeks_of_food,
+        _4_weeks_of_food
+      ]
     end
   end
 
@@ -142,12 +163,6 @@ class User < ApplicationRecord
 
   def calculated_trial_length
     (dogs.size == 1 && !dogs.first.topper_available) ? 4 : 2
-  end
-
-  def amount_of_food_options
-    if trial_length == 4 then [["4 weeks of food", "4_weeks"]]
-    else [["2 weeks of food", "2_weeks"], ["4 weeks of food", "4_weeks"]]
-    end
   end
 
   def how_often_options

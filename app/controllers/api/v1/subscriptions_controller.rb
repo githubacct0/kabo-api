@@ -118,7 +118,10 @@ class Api::V1::SubscriptionsController < ApplicationController
       all_active_or_future_subscriptions_are_custom: all_active_or_future_subscriptions_are_custom,
       # Next occurencies for pause plans
       next_occurrencies: MyLib::Icecube.subscription_next_occurrencies,
-      skipped_first_box: @user.skipped_first_box
+      skipped_first_box: @user.skipped_first_box,
+      # amount of food
+      amount_of_food_options: @user.amount_of_food_options,
+      amount_of_food: @user.amount_of_food
     }, status: :ok
   end
 
