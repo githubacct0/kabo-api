@@ -41,7 +41,8 @@ module Dogable
           image_url: Rails.configuration.recipe_images[:chicken],
           description: "A lean protein diet with hearty grains. Made with Canadian-sourced chicken.",
           new: false,
-          analysis: Constants::CHICKEN_ANALYSIS
+          analysis: Constants::CHICKEN_ANALYSIS,
+          ingredients: Constants::CHICKEN_RECIPE
         }
       when "Savoury Beef"
         {
@@ -50,7 +51,8 @@ module Dogable
           image_url: Rails.configuration.recipe_images[:beef],
           description: "A grain-free diet, perfect for picky eaters! Made from locally-sourced beef.",
           new: false,
-          analysis: Constants::BEEF_ANALYSIS
+          analysis: Constants::BEEF_ANALYSIS,
+          ingredients: Constants::BEEF_RECIPE
         }
       when "Hearty Turkey"
         {
@@ -59,7 +61,8 @@ module Dogable
           image_url: Rails.configuration.recipe_images[:turkey],
           description: "Made with lean, locally-sourced turkey breast. Low-Fat. Gluten-Free.",
           new: false,
-          analysis: Constants::TURKEY_ANALYSIS
+          analysis: Constants::TURKEY_ANALYSIS,
+          ingredients: Constants::TURKEY_RECIPE
         }
       when "Luscious Lamb"
         {
@@ -68,7 +71,8 @@ module Dogable
           image_url: Rails.configuration.recipe_images[:lamb],
           description: "Made with premium Ontario lamb. A novel protein choice for picky eaters and senior dogs!",
           new: true,
-          analysis: Constants::LAMB_ANALYSIS
+          analysis: Constants::LAMB_ANALYSIS,
+          ingredients: Constants::LAMB_RECIPE
         }
       when "Chicken"
         {
@@ -77,7 +81,8 @@ module Dogable
           image_url: kibble_image_url,
           description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
           new: false,
-          analysis: Constants::CHICKEN_KIBBLE_ANALYSIS
+          analysis: Constants::CHICKEN_KIBBLE_ANALYSIS,
+          ingredients: Constants::CHICKEN_KIBBLE_RECIPE
         }
       when "Turkey & Salmon"
         {
@@ -86,7 +91,8 @@ module Dogable
           image_url: kibble_image_url,
           description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
           new: false,
-          analysis: Constants::TURKEY_SALMON_KIBBLE_ANALYSIS
+          analysis: Constants::TURKEY_SALMON_KIBBLE_ANALYSIS,
+          ingredients: Constants::TURKEY_SALMON_KIBBLE_RECIPE
         }
       when "Duck"
         {
@@ -95,7 +101,8 @@ module Dogable
           image_url: kibble_image_url,
           description: "Locally-sourced dry dog food, made with high quality ingredients you can trust.",
           new: false,
-          analysis: Constants::DUCK_KIBBLE_ANALYSIS
+          analysis: Constants::DUCK_KIBBLE_ANALYSIS,
+          ingredients: Constants::DUCK_KIBBLE_RECIPE
         }
       else {}
       end
