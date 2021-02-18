@@ -5,6 +5,7 @@ class Api::V1::OnboardingController < ActionController::API
     input = dog_params[:input]
 
     breeds = Dog.breeds
+    unknown_breeds = Dog.unknown_breeds
     ages = Dog.ages
     genders = Dog.genders
     weight_units = Dog.weight_units
@@ -27,6 +28,7 @@ class Api::V1::OnboardingController < ActionController::API
 
       start_data = {
         breeds: breeds,
+        unknown_breeds: unknown_breeds,
         ages: ages
       }
 
