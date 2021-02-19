@@ -9,7 +9,12 @@ module Renderable
     }, status: :bad_request
   end
 
-  def render_error(error, status)
+  def render_error(error, status, contactable = false)
+    contact = {
+      message: "please contact help@kabo.co if you're experiencing any issues"
+    }
+    error += contact[:message] if contactable
+
     render json: {
       error: error
     }, status: status
