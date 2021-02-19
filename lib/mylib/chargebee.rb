@@ -590,6 +590,16 @@ module MyLib
         ChargeBee::Subscription.list(param)
       end
 
+      # Get subscription
+      def get_subscription(subscription_id:, statuses: [])
+        subscription = ChargeBee::Subscription.retrieve(subscription_id)
+        if statuses.any?
+          statuses.include?(subscription.subscription.status) ? subscription : nil
+        else
+          subscription
+        end
+      end
+
       def get_invoice(subscription:, statuses: [])
         is_active = statuses.include? subscription&.status
         if is_active

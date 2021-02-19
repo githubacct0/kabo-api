@@ -407,21 +407,15 @@ class Api::V1::SubscriptionsController < ApplicationController
     if skip_delivery_params_valid?
       dog = Dog.find_by_id(skip_delivery_params[:dog_id])
       if dog.present?
-        active_subscription = {}
-        MyLib::Chargebee.get_subscription_list(
-          chargebee_customer_id: @user.chargebee_customer_id
-        ).each do |chargebee_subscription|
-          subscription = chargebee_subscription.subscription
-          is_active = ["active", "future"].include?(subscription.status) && subscription.id == dog.chargebee_subscription_id
-          active_subscription = subscription if is_active
-        end
+        if @user.subscription_phase_status == "in_trial"
+          active_subscription = MyLib::Chargebee.get_subscription(subscription_id: dog.chargebee_subscription_id, statuses: ["active", "future"])
+          support = "Could not skip delivery date, please try again or contact support@kabo.co"
 
-        support = "Could not skip delivery date, please try again or contact support@kabo.co"
+          if active_subscription.present?
+            active_subscription = active_subscription.subscription
+            subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
-        if active_subscription.present?
-          subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
-          if @user.subscription_phase_status == "in_trial"
             if MyLib::Chargebee.update_subscription_start_date(@user, subscription_phase[:skip_date_billing].to_i)
               @user.update_columns(skipped_first_box: true)
 
@@ -434,11 +428,11 @@ class Api::V1::SubscriptionsController < ApplicationController
               render_error(support, :bad_request)
             end
           else
-            puts "app_log(WARNING): #{@user.subscription_phase_status} subscription can't be skipped."
+            puts "app_log(WARNING): The dog doesn't have active subscription."
             render_error(support, :bad_request)
           end
         else
-          puts "app_log(WARNING): No active subscription exists."
+          puts "app_log(WARNING): #{@user.subscription_phase_status} subscription can't be skipped."
           render_error(support, :bad_request)
         end
       else
