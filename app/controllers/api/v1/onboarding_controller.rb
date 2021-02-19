@@ -61,6 +61,8 @@ class Api::V1::OnboardingController < ActionController::API
     end
   end
 
+  # Route: /api/v1/onboarding/recipes
+  # Method: GET
   # Get recipes
   def recipes
     render json: {
@@ -69,6 +71,8 @@ class Api::V1::OnboardingController < ActionController::API
     }, status: :ok
   end
 
+  # Route: /api/v1/onboarding/portions
+  # Method: GET
   # Get daily portions
   def portions
     if portions_params_valid?
@@ -76,36 +80,40 @@ class Api::V1::OnboardingController < ActionController::API
       daily_portions = {}
       dog_ids.each do |dog_id|
         temp_dog = TempDog.find_by(id: dog_id)
-        if temp_dog.present?
-          daily_portions[dog_id] = temp_dog.daily_portions(type: "onboarding")
-        end
+        daily_portions[dog_id] = temp_dog.present? ? temp_dog.daily_portions(type: "onboarding") : []
       end
 
       render json: {
         daily_portions: daily_portions
       }, status: :ok
     else
-      render json: {
-        error: "Missed params!"
-      }, status: :not_found
+      render_missed_params
     end
   end
 
+  # Route: /api/v1/onboarding/users
+  # Method: POST
   # Create temp user
   def create
-    temp_user = TempUser.create!
-    temp_user.temp_dogs.create!(onboarding_params[:dogs])
+    if onboarding_params_valid?
+      begin
+        temp_user = TempUser.create!
+        temp_user.temp_dogs.create!(onboarding_params[:dogs])
 
-    render json: {
-      temp_user_id: temp_user.id,
-      temp_dog_ids: temp_user.temp_dog_ids
-    }, status: :ok
-  rescue => e
-    puts "Error: #{e.message}"
+        render json: {
+          temp_user_id: temp_user.id,
+          temp_dog_ids: temp_user.temp_dog_ids
+        }, status: :ok
+      rescue => e
+        puts "Error: #{e.message}"
 
-    render json: {
-      error: e.message
-    }, status: :bad_request
+        render json: {
+          error: e.message
+        }, status: :bad_request
+      end
+    else
+      render_missed_params
+    end
   end
 
   # Update
@@ -238,6 +246,17 @@ class Api::V1::OnboardingController < ActionController::API
         params.require(:onboarding).permit(:step, :plan_interval, dogs: [:id, :cooked_portion, :kibble_portion])
       when "account"
         params.require(:onboarding).permit(:step, :first_name, :email, :referral_code, :token)
+      end
+    end
+
+    def onboarding_params_valid?
+      return false if params[:step].nil?
+
+      case params[:step]
+      when "start"
+        keys = [:name, :breed, :age_in_months]
+        onboarding_params[:dogs].present? &&
+          onboarding_params[:dogs].all? { |dog| keys.all? { |key| dog.key? key } }
       end
     end
 end
