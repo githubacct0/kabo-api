@@ -231,7 +231,7 @@ class Api::V1::OnboardingController < ActionController::API
     end
 
     def portions_params_valid?
-      portions_params.present?
+      portions_params[:dog_ids].present?
     end
 
     def onboarding_params
