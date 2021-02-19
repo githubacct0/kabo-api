@@ -31,32 +31,30 @@ class Api::V1::OnboardingController < ActionController::API
     else
       step = dog_params[:step]
 
-      if step.present?
-        start_data = {
-          breeds: breeds,
-          unknown_breeds: unknown_breeds,
-          ages: ages
-        }
+      start_data = {
+        breeds: breeds,
+        unknown_breeds: unknown_breeds,
+        ages: ages
+      }
 
-        detail_data = {
-          genders: genders,
-          weight_units: weight_units,
-          body_types: body_types,
-          activity_levels: activity_levels
-        }
+      detail_data = {
+        genders: genders,
+        weight_units: weight_units,
+        body_types: body_types,
+        activity_levels: activity_levels
+      }
 
-        if step == "start"
-          promo_banner = {
-            text: "Surprise! We applied a 40% discount to your first order"
-          }
-          render json: { promo_banner: promo_banner }.merge(start_data), status: :ok
-        elsif step == "detail"
-          render json: detail_data, status: :ok
-        else
-          render json: start_data.merge(detail_data), status: :ok
-        end
+      if step.nil?
+        render json: start_data.merge(detail_data), status: :ok
+      elsif step == "start"
+        promo_banner = {
+          text: "Surprise! We applied a 40% discount to your first order"
+        }
+        render json: { promo_banner: promo_banner }.merge(start_data), status: :ok
+      elsif step == "detail"
+        render json: detail_data, status: :ok
       else
-        render_missed_params
+        render json: {}, status: :bad_request
       end
     end
   end
