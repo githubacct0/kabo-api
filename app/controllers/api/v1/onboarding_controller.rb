@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class Api::V1::OnboardingController < ActionController::API
+  include Renderable
+
+  # Route: /api/v1/onboarding/signup
+  # Method: GET
+  # Get dog options
   def index
     input = dog_params[:input]
 
@@ -26,28 +31,32 @@ class Api::V1::OnboardingController < ActionController::API
     else
       step = dog_params[:step]
 
-      start_data = {
-        breeds: breeds,
-        unknown_breeds: unknown_breeds,
-        ages: ages
-      }
-
-      detail_data = {
-        genders: genders,
-        weight_units: weight_units,
-        body_types: body_types,
-        activity_levels: activity_levels
-      }
-
-      if step == "start"
-        promo_banner = {
-          text: "Surprise! We applied a 40% discount to your first order"
+      if step.present?
+        start_data = {
+          breeds: breeds,
+          unknown_breeds: unknown_breeds,
+          ages: ages
         }
-        render json: { promo_banner: promo_banner }.merge(start_data), status: :ok
-      elsif step == "detail"
-        render json: detail_data, status: :ok
+
+        detail_data = {
+          genders: genders,
+          weight_units: weight_units,
+          body_types: body_types,
+          activity_levels: activity_levels
+        }
+
+        if step == "start"
+          promo_banner = {
+            text: "Surprise! We applied a 40% discount to your first order"
+          }
+          render json: { promo_banner: promo_banner }.merge(start_data), status: :ok
+        elsif step == "detail"
+          render json: detail_data, status: :ok
+        else
+          render json: start_data.merge(detail_data), status: :ok
+        end
       else
-        render json: start_data.merge(detail_data), status: :ok
+        render_missed_params
       end
     end
   end
