@@ -144,11 +144,11 @@ class Api::V1::UsersController < ApplicationController
 
   # Route: /api/v1/user/password
   # Method: PUT
-  # Update user's password
-  def update_password
-    if update_password_params_valid?
+  # Change user's password
+  def change_password
+    if change_password_params_valid?
       begin
-        @user.update!(update_password_params)
+        @user.update!(change_password_params)
         render json: {
           token: encode_token({ user_id: @user.id })
         }, status: :ok
@@ -290,7 +290,7 @@ class Api::V1::UsersController < ApplicationController
   end
 
   private
-    def update_password_params
+    def change_password_params
       params.permit(:password, :password_confirmation)
     end
 
@@ -328,9 +328,9 @@ class Api::V1::UsersController < ApplicationController
       )
     end
 
-    def update_password_params_valid?
-      update_password_params[:password].present? &&
-        update_password_params[:password_confirmation]
+    def change_password_params_valid?
+      change_password_params[:password].present? &&
+        change_password_params[:password_confirmation]
     end
 
     def update_delivery_frequency_params_valid?
