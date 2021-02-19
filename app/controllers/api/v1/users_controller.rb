@@ -209,11 +209,9 @@ class Api::V1::UsersController < ApplicationController
       render_missed_params
     else
       shipping_address = billing_address = nil, nil
-      chargebee_subscription_list = MyLib::Chargebee.get_subscription_list(chargebee_customer_id: @user.chargebee_customer_id)
-      chargebee_subscription_list.each do |entry|
-        shipping_address = entry.subscription.shipping_address
-        billing_address = entry.customer.billing_address
-      end
+      chargebee_subscription_list = MyLib::Chargebee.get_subscription_list(chargebee_customer_id: @user.chargebee_customer_id, limit: 1)
+      shipping_address = chargebee_subscription_list.first.subscription.shipping_address
+      billing_address = chargebee_subscription_list.first.customer.billing_address
 
       shipping_mapping = address_mapping(type: "shipping")
       payment_method_params = change_payment_method_params

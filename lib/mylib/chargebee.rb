@@ -4,54 +4,18 @@ module MyLib
   class Chargebee
     class << self
       def update_customer_and_subscription(user)
-        if !user.chargebee_customer_id.blank?
+        if user.chargebee_customer_id.present?
 
           begin
-            if !user.shipping_first_name.blank?
+            if user.shipping_first_name.present?
               ChargeBee::Customer.update(user.chargebee_customer_id, {
                 first_name: user.shipping_first_name,
                 last_name: user.shipping_last_name,
                 email: user.email,
                 phone: user.shipping_phone_number
               })
-            end
 
-            if !user.shipping_phone_number.blank?
-              ChargeBee::Customer.update_billing_info(user.chargebee_customer_id, {
-                billing_address: {
-                  first_name: user.billing_first_name,
-                  last_name: user.billing_last_name,
-                  line1: user.billing_street_address,
-                  line2: user.billing_apt_suite,
-                  city: user.billing_city,
-                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
-                  zip: user.billing_postal_code,
-                  country: "CA",
-                  phone: user.billing_phone_number,
-                  email: user.email
-                }
-              })
-            end
-
-            if !user.billing_first_name.blank?
-              ChargeBee::Customer.update_billing_info(user.chargebee_customer_id, {
-                billing_address: {
-                  first_name: user.billing_first_name,
-                  last_name: user.billing_last_name,
-                  line1: user.billing_street_address,
-                  line2: user.billing_apt_suite,
-                  city: user.billing_city,
-                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
-                  zip: user.billing_postal_code,
-                  country: "CA",
-                  phone: user.billing_phone_number,
-                  email: user.email
-                }
-              })
-            end
-
-            if !user.shipping_first_name.blank?
-              MyLib::Chargebee.get_subscription_list(
+              get_subscription_list(
                 chargebee_customer_id: user.chargebee_customer_id
               ).each do |entry|
                 ChargeBee::Address.update({
@@ -72,7 +36,41 @@ module MyLib
               end
             end
 
-            if !user.shipping_first_name.blank? && user.subscription_phase_status == "waiting_for_trial_shipment"
+            if user.shipping_phone_number.present?
+              ChargeBee::Customer.update_billing_info(user.chargebee_customer_id, {
+                billing_address: {
+                  first_name: user.billing_first_name,
+                  last_name: user.billing_last_name,
+                  line1: user.billing_street_address,
+                  line2: user.billing_apt_suite,
+                  city: user.billing_city,
+                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
+                  zip: user.billing_postal_code,
+                  country: "CA",
+                  phone: user.billing_phone_number,
+                  email: user.email
+                }
+              })
+            end
+
+            if user.billing_first_name.present?
+              ChargeBee::Customer.update_billing_info(user.chargebee_customer_id, {
+                billing_address: {
+                  first_name: user.billing_first_name,
+                  last_name: user.billing_last_name,
+                  line1: user.billing_street_address,
+                  line2: user.billing_apt_suite,
+                  city: user.billing_city,
+                  state: MyLib::Checkout.get_province_from_postal_code(user.billing_postal_code),
+                  zip: user.billing_postal_code,
+                  country: "CA",
+                  phone: user.billing_phone_number,
+                  email: user.email
+                }
+              })
+            end
+
+            if user.shipping_first_name.present? && user.subscription_phase_status == "waiting_for_trial_shipment"
               # Trial user, update first order details - does not update invoice details
               list = ChargeBee::Invoice.list({
                 "customer_id[is]": user.chargebee_customer_id
@@ -107,35 +105,32 @@ module MyLib
             raise e
           end
 
-          if !user.stripe_token.blank? || !user.reference_id.blank?
-            begin
-              if !user.stripe_token.blank?
-                ChargeBee::Card.update_card_for_customer(user.chargebee_customer_id, {
-                  payment_method: {
-                    type: "card",
-                    tmp_token: user.stripe_token
-                  }
-                })
-              elsif !user.reference_id.blank?
-                ChargeBee::Customer.update_payment_method(user.chargebee_customer_id, {
-                  payment_method: {
-                    type: "paypal_express_checkout",
-                    reference_id: user.reference_id
-                  }
-                })
-              end
-            rescue StandardError => e
-              user.errors.add(:base, e)
-              Raven.capture_exception(e)
-              raise e
+          begin
+            if user.stripe_token.present?
+              ChargeBee::Card.update_card_for_customer(user.chargebee_customer_id, {
+                payment_method: {
+                  type: "card",
+                  tmp_token: user.stripe_token
+                }
+              })
+            elsif user.reference_id.present?
+              ChargeBee::Customer.update_payment_method(user.chargebee_customer_id, {
+                payment_method: {
+                  type: "paypal_express_checkout",
+                  reference_id: user.reference_id
+                }
+              })
             end
+          rescue StandardError => e
+            user.errors.add(:base, e)
+            Raven.capture_exception(e)
+            raise e
           end
-
         end
       end
 
       def update_subscription_start_date(user, start_date)
-        MyLib::Chargebee.get_subscription_list(
+        get_subscription_list(
           chargebee_customer_id: user.chargebee_customer_id,
           status: "future"
         ).each do |entry|
@@ -584,10 +579,11 @@ module MyLib
       end
 
       # Get subscription list
-      def get_subscription_list(chargebee_customer_id:, status: nil)
-        param = { "customer_id[is]" => chargebee_customer_id }
-        param[:status[is]] = status if status.present?
-        ChargeBee::Subscription.list(param)
+      def get_subscription_list(chargebee_customer_id:, status: nil, limit: nil)
+        params = { "customer_id[is]" => chargebee_customer_id }
+        params[:status[is]] = status if status.present?
+        params[:limit] = limit if limit.present?
+        ChargeBee::Subscription.list(params)
       end
 
       # Get subscription
