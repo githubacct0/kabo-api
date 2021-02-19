@@ -8,9 +8,9 @@ class Api::V1::SubscriptionsController < ApplicationController
   # Get user's subscriptions such as next delivery, plans, delivery frequencies
   def index
     # Get Subscriptions
-    subscriptions, subscription, card = {}, {}, {}
+    subscriptions, subscription = {}, {}
     active_subscription, shipping_address, subscription_phase = {}, {}, {}
-    subscription_created_at, payment_method_icon, payment_method_details = Array.new(3, nil)
+    subscription_created_at = nil
     total_paid = 0
     dogs = @user.dogs
 
@@ -33,7 +33,6 @@ class Api::V1::SubscriptionsController < ApplicationController
         shipping_province: subscription.shipping_address.state_code,
         addons: subscription.addons&.map { |addon| { id: addon.id, unit_price: addon.unit_price, quantity: addon.quantity } }
       }
-      card = chargebee_subscription.card
       shipping_address = subscription&.shipping_address
       subscription_created_at = subscription&.created_at
     end
@@ -68,19 +67,6 @@ class Api::V1::SubscriptionsController < ApplicationController
         transaction_list.each do |entry|
           transaction = entry.transaction
           amounts_paid << transaction.amount
-          payment_method_icon =
-            case transaction.payment_method
-            when "paypal_express_checkout" then "paypal-logo"
-            when "apple_pay" then "apple-pay-logo"
-            else "generic-cc"
-            end
-
-          payment_method_details =
-            if ["paypal_express_checkout", "apple_pay"].include?(transaction.payment_method)
-              nil
-            else
-              "Card ending in #{transaction.masked_card_number.last(4)}"
-            end
         end
 
         total_paid = Money.new(amounts_paid.sum).format
@@ -119,9 +105,6 @@ class Api::V1::SubscriptionsController < ApplicationController
       subscription: subscription,
       active_subscription: active_subscription,
       subscription_phase: subscription_phase,
-      card: card,
-      payment_method_icon: payment_method_icon,
-      payment_method_details: payment_method_details,
       total_paid: total_paid,
       purchase_by_date: purchase_by_date,
       default_delivery_date: default_delivery_date,
