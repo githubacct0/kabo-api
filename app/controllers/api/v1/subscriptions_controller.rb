@@ -419,7 +419,7 @@ class Api::V1::SubscriptionsController < ApplicationController
         support = "Could not skip delivery date, please try again or contact support@kabo.co"
 
         if active_subscription.present?
-          subscription_phase = AccountHelper.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
+          subscription_phase = MyLib::Account.subscription_phase(active_subscription, @user.skipped_first_box, {}, @user)
 
           if @user.subscription_phase_status == "in_trial"
             if MyLib::Chargebee.update_subscription_start_date(@user, subscription_phase[:skip_date_billing].to_i)
@@ -434,9 +434,11 @@ class Api::V1::SubscriptionsController < ApplicationController
               render_error(support, :bad_request)
             end
           else
+            puts "app_log(WARNING): #{@user.subscription_phase_status} subscription can't be skipped."
             render_error(support, :bad_request)
           end
         else
+          puts "app_log(WARNING): No active subscription exists."
           render_error(support, :bad_request)
         end
       else
