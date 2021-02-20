@@ -289,6 +289,22 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
+  # Route: /api/v1/user/contact
+  # Method: PUT
+  # Update email and password
+  def update_contact
+    if update_contact_params_valid?
+      new_email = update_contact_params[:email]
+
+      render json: {
+        email_updated: new_email == @user.email,
+        phone_number_updated: true
+      }
+    else
+      render_missed_params
+    end
+  end
+
   private
     def change_password_params
       params.permit(:password, :password_confirmation)
@@ -372,5 +388,14 @@ class Api::V1::UsersController < ApplicationController
       mapping[:phone_number] = "phone" if type == "billing"
 
       mapping
+    end
+
+    def update_contact_params
+      params.permit(:email, :phone_number)
+    end
+
+    def update_contact_params_valid
+      update_contact_params[:email].present? &&
+        update_contact_params[:phone_number].present?
     end
 end

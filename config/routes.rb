@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       put "/user/password" => "users#change_password"
       put "/user/delivery_address" => "users#update_delivery_address"
       put "/user/payment_method" => "users#change_payment_method"
+      put "/user/contact" => "users#update_contact"
 
       ## Orders tab
       get "/user/orders" => "orders#index"
