@@ -485,8 +485,8 @@ module MyLib
 
         {
           status: true,
-          email_updated: customer.email == email,
-          phone_number_updated: customer.phone == phone_number
+          email_updated: customer.email != email,
+          phone_number_updated: customer.phone != phone_number
         }
       rescue => e
         puts "app_log(ERROR: update_contact): #{e.message}"
