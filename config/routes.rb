@@ -16,6 +16,7 @@ Rails.application.routes.draw do
       post "/user/subscriptions/pause" => "subscriptions#pause"
       post "/user/subscriptions/resume" => "subscriptions#resume"
       post "/user/subscriptions/cancel" => "subscriptions#cancel"
+      post "/user/subscriptions/reactivate" => "subscriptions#reactivate"
       get "/user/subscriptions/meal_plans" => "subscriptions#meal_plans"
       post "/user/subscriptions/portions" => "subscriptions#daily_portions"
       post "/user/subscriptions/meal_plan/estimate" => "subscriptions#estimate_meal_plan"

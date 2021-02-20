@@ -160,72 +160,80 @@ class Api::V1::SubscriptionsController < ApplicationController
 
   # Route: /api/v1/user/subscriptions/resume
   # Method: POST
-  # Resume user's subscription
+  # Resume/Reactivate user's subscription
   def resume
     unless resume_subscriptions_params_valid?
       render_missed_params
     else
       dog = Dog.find_by_id(resume_subscriptions_params[:dog_id])
+      resume_type = resume_subscriptions_params[:type]
 
       if dog.present?
         dog_subscription = ChargeBee::Subscription.retrieve(dog.chargebee_subscription_id)&.subscription
-        begin
-          if ["paused", "cancelled"].include? dog_subscription.status
-            if dog_subscription.status == "paused"
-              result = MyLib::Chargebee.unpause_subscription(@user, dog)
+        if dog_subscription.present?
+          begin
+            if ["paused", "cancelled"].include? dog_subscription.status
+              if dog_subscription.status == "cancelled" && resume_type == "resume"
+                render_error("Please reactivate instead of resume", :bad_request, false)
+              elsif dog_subscription.status == "paused" && resume_type == "cancel"
+                render_error("Please resume instead of reactivate", :bad_request, false)
+              else
+                if dog_subscription.status == "paused"
+                  result = MyLib::Chargebee.resume_subscription(dog.chargebee_subscription_id)
+                else
+                  result = MyLib::Chargebee.reactivate_subscription(dog.chargebee_subscription_id)
+                end
+
+                subscription_start_date = MyLib::Icecube.subscription_start_date
+
+                default_delivery_date = subscription_start_date + 7.days
+                default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip) if result.subscription.shipping_address.zip.present?
+
+                UserMailer.with(
+                  user: @user,
+                  shipping_address: JSON.parse(result.subscription.shipping_address.to_s),
+                  subject: "Your subscription for #{dog.name} has been #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'}!",
+                  description: "Your next order will be delivered #{Time.zone.at(default_delivery_date).strftime("%b %e, %Y")}"
+                ).resume_subscription_confirmation.deliver_later
+
+                SlackWorker.perform_async(
+                  hook_url: Rails.configuration.slack_webhooks[:accountpage],
+                  text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
+                  icon_emoji: ":arrow_forward:"
+                )
+
+                AirtableWorker.perform_async(
+                  table_id: Rails.configuration.airtable[:subscription_resume_app_key],
+                  view_name: "Customers",
+                  record: {
+                    "Email": @user.email,
+                    "CB Customer ID": @user.chargebee_customer_id,
+                    "Province": result.subscription.shipping_address.state
+                  }
+                )
+
+                KlaviyoWorker.perform_async(
+                  list_id: "Wy22hD",
+                  email: @user.email
+                )
+
+                render json: {
+                  dog: dog
+                }, status: :ok
+              end
             else
-              result = MyLib::Chargebee.reactivate_subscription(@user, dog)
+              render_error("Your subscription is already active,", :bad_request, true)
             end
-
-            subscription_start_date = MyLib::Icecube.subscription_start_date
-
-            default_delivery_date = subscription_start_date + 7.days
-            if !result.subscription.shipping_address.zip.nil?
-              default_delivery_date = subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(result.subscription.shipping_address.zip)
-            end
-
-            UserMailer.with(
-              user: @user,
-              shipping_address: JSON.parse(result.subscription.shipping_address.to_s),
-              subject: "Your subscription for #{dog.name} has been #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'}!",
-              description: "Your next order will be delivered #{Time.zone.at(default_delivery_date).strftime("%b %e, %Y")}"
-            ).resume_subscription_confirmation.deliver_later
-
-            SlackWorker.perform_async(
-              hook_url: Rails.configuration.slack_webhooks[:accountpage],
-              text: "#{ ('[' + Rails.configuration.heroku_app_name + '] ') if Rails.configuration.heroku_app_name != 'kabo-app' }#{@user.email} has #{dog_subscription.status == 'paused' ? 'unpaused' : 'reactivated'} their subscription for #{dog.name}",
-              icon_emoji: ":arrow_forward:"
-            )
-
-            AirtableWorker.perform_async(
-              table_id: Rails.configuration.airtable[:subscription_resume_app_key],
-              view_name: "Customers",
-              record: {
-                "Email": @user.email,
-                "CB Customer ID": @user.chargebee_customer_id,
-                "Province": result.subscription.shipping_address.state
-              }
-            )
-
-            KlaviyoWorker.perform_async(
-              list_id: "Wy22hD",
-              email: @user.email
-            )
+          rescue StandardError => e
+            Raven.capture_exception(e)
 
             render json: {
-              dog: dog
-            }, status: :ok
-          else
-            render json: {
-              error: "Your subscription is already active, please contact help@kabo.co if you're experiencing any issues"
-            }, status: :ok
+              error: e.message
+            }, status: :internal_server_error
           end
-        rescue StandardError => e
-          Raven.capture_exception(e)
-
-          render json: {
-            error: e.message
-          }, status: :internal_server_error
+        else
+          puts "app_log(ERROR): the subscription(#{dog.chargebee_subscription_id}) doesn't exist"
+          render_contact_error(:not_found)
         end
       else
         render json: {
@@ -274,6 +282,17 @@ class Api::V1::SubscriptionsController < ApplicationController
           error: "Dog not exist!"
         }, status: :not_found
       end
+    end
+  end
+
+  # Route: /api/v1/user/subscriptions/reactivate
+  # Method: POST
+  # Reactivate subscription
+  def reactivate
+    if reactivate_subscriptions_params_valid?
+
+    else
+      render_missed_params
     end
   end
 
@@ -439,11 +458,12 @@ class Api::V1::SubscriptionsController < ApplicationController
     end
 
     def resume_subscriptions_params
-      params.require(:subscription).permit(:dog_id)
+      params.require(:subscription).permit(:dog_id, :type)
     end
 
     def resume_subscriptions_params_valid?
-      resume_subscriptions_params[:dog_id].present?
+      resume_subscriptions_params[:dog_id].present? &&
+        ["resume", "reactivate"].include?(resume_subscriptions_params[:type])
     end
 
     def daily_portions_params
@@ -483,5 +503,13 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     def skip_delivery_params_valid?
       skip_delivery_params[:dog_id].present?
+    end
+
+    def reactivate_subscriptions_params
+      params.require(:subscription).permit(:dog_id)
+    end
+
+    def reactivate_subscriptions_params_valid?
+      reactivate_subscriptions_params[:dog_id].present?
     end
 end

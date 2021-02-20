@@ -13,10 +13,16 @@ module Renderable
     contact = {
       message: "please contact help@kabo.co if you're experiencing any issues"
     }
-    error += contact[:message] if contactable
+    error = error.to_s + " " + contact[:message] if contactable
 
     render json: {
       error: error
+    }, status: status
+  end
+
+  def render_contact_error(status)
+    render json: {
+      error: "Please contact help@kabo.co if you're experiencing any issues"
     }, status: status
   end
 end
