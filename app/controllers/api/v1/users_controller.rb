@@ -294,12 +294,14 @@ class Api::V1::UsersController < ApplicationController
   # Update email and password
   def update_contact
     if update_contact_params_valid?
-      new_email = update_contact_params[:email]
+      result = MyLib::Chargebee.update_contact(
+        customer_id: @user.chargebee_customer_id,
+        email: update_contact_params[:email],
+        phone_number: update_contact_params[:phone_number]
+      )
+      status = result[:status] ? :ok : :bad_request
 
-      render json: {
-        email_updated: new_email == @user.email,
-        phone_number_updated: true
-      }
+      render json: result, status: status
     else
       render_missed_params
     end
@@ -394,7 +396,7 @@ class Api::V1::UsersController < ApplicationController
       params.permit(:email, :phone_number)
     end
 
-    def update_contact_params_valid
+    def update_contact_params_valid?
       update_contact_params[:email].present? &&
         update_contact_params[:phone_number].present?
     end

@@ -436,6 +436,66 @@ module MyLib
           error: e.message
         }
       end
+
+      # Update email and phone number
+      def update_contact(customer_id:, email:, phone_number:)
+        customer = ChargeBee::Customer.retrieve(customer_id)&.customer
+
+        ChargeBee::Customer.update(customer_id, {
+          email: email,
+          phone: phone_number
+        })
+
+        ChargeBee::Customer.update_billing_info(customer_id, {
+          billing_address: {
+            phone: phone_number,
+            email: email
+          }
+        })
+
+        get_subscription_list(
+          chargebee_customer_id: customer_id
+        ).each do |entry|
+          ChargeBee::Address.update({
+            subscription_id: entry.subscription.id,
+            label: "shipping_address",
+            email: email,
+            phone: phone_number
+          })
+        end
+
+        # Trial user, update first order details - does not update invoice details
+        list = ChargeBee::Invoice.list({
+          "customer_id[is]": customer_id
+        })
+
+        linked_orders = []
+        list.each do |entry|
+          linked_orders.push(entry.invoice.linked_orders.map { |lo| lo.id })
+        end
+
+        linked_orders.flatten.each do |linked_order|
+          ChargeBee::Order.update(linked_order, {
+            shipping_address: {
+              email: email,
+              phone: phone_number
+            }
+          })
+        end
+
+        {
+          status: true,
+          email_updated: customer.email == email,
+          phone_number_updated: customer.phone == phone_number
+        }
+      rescue => e
+        puts "app_log(ERROR: update_contact): #{e.message}"
+
+        {
+          status: false,
+          error: e.message
+        }
+      end
     end
   end
 end
