@@ -3,7 +3,7 @@
 module MyLib
   class SlackNotifier
     class << self
-      def notify(notifier: nil, webhook:, text:, icon_emoji:)
+      def notify(notifier: nil, webhook: nil, text:, icon_emoji:)
         if Rails.env.production?
           begin
             notifier ||= Slack::Notifier.new webhook
