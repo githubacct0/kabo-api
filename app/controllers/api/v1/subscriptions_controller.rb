@@ -80,9 +80,6 @@ class Api::V1::SubscriptionsController < ApplicationController
       else
         after_2days.strftime("%b %e, %Y")
       end
-    puts "yes"
-    puts shipping_address
-    puts "no"
     default_delivery_date =
       if shipping_address.zip.present?
         subscription_start_date + MyLib::Account.delivery_date_offset_by_postal_code(shipping_address.zip)
