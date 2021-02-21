@@ -279,7 +279,7 @@ module MyLib
 
           {
             status: true,
-            result: subscription_update_result
+            update_result: subscription_update_result
           }
         rescue StandardError => e
           Raven.capture_exception(e)
@@ -293,58 +293,44 @@ module MyLib
       end
 
       def reactivate_subscription(user, dog)
+        subscription_start_date = MyLib::Icecube.subscription_start_date
         subscription_update_params = {
-          plan_id: user.chargebee_plan_interval,
-          addons: subscription_param_addons,
-          replace_addon_list: true,
-          cf_resume_start_date: subscription_start_date,
-          shipping_address: {
-            first_name: user.shipping_first_name,
-            last_name: user.shipping_last_name,
-            line1: user.shipping_street_address,
-            line2: user.shipping_apt_suite,
-            line3: user.shipping_delivery_instructions,
-            city: user.shipping_city,
-            state_code: MyLib::Checkout.get_province_from_postal_code(user.shipping_postal_code),
-            zip: user.shipping_postal_code,
-            country: "CA",
-            phone: user.shipping_phone_number,
-            email: user.email
-          }
+          cf_resume_start_date: subscription_start_date
         }
 
-        subscription_update_params[:coupon_ids] = [user.referral_code] if !user.referral_code.blank?
-
         begin
-          ChargeBee::Subscription.reactivate(dog.chargebee_subscription_id) if subscription_update_result.subscription.status != "active"
-        rescue ChargeBee::PaymentError=> ex
+          subscription_update_result = ChargeBee::Subscription.update(dog.chargebee_subscription_id, subscription_update_params)
+          ChargeBee::Subscription.reactivate(dog.chargebee_subscription_id)
+
+          # Future billing date after current term
+          future_schedule = MyLib::Icecube.subscription_schedule("2020-01-03 12:00:00", 2)
+          future_billing_date = future_schedule.next_occurrences(2, Time.zone.at(subscription_start_date))[1].utc.to_i
+
+          ChargeBee::Subscription.change_term_end(dog.chargebee_subscription_id, {
+            term_ends_at: future_billing_date
+          })
+
+          {
+            status: true,
+            update_result: subscription_update_result
+          }
+        rescue ChargeBee::PaymentError=> e
           AirtableWorker.perform_async(
             table_id: "appO8lrXXmebSAgMU",
             view_name: "Customers",
             record: {
               "Email": user.email,
-              "Error Text": ex.message,
-              "Error Code": ex.api_error_code,
+              "Error Text": e.message,
+              "Error Code": e.api_error_code,
               "Action": "Reactivate Subscription"
             }
           )
 
-          user.errors.add(:base, "There was a problem with your payment method, please check the details and try again")
-          raise ActiveRecord::Rollback
+          {
+            status: false,
+            error: e.message
+          }
         end
-
-        # Future billing date after current term
-        future_schedule = IceCube::Schedule.new(Time.zone.parse("2020-01-03 12:00:00")) do |s|
-          s.add_recurrence_rule IceCube::Rule.weekly(2).day(:friday)
-        end
-
-        future_billing_date = future_schedule.next_occurrences(2, Time.zone.at(subscription_start_date))[1].utc.to_i
-
-        ChargeBee::Subscription.change_term_end(dog.chargebee_subscription_id, {
-          term_ends_at: future_billing_date
-        })
-
-        subscription_update_result
       end
 
       # Update subscription
