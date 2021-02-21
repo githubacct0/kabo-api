@@ -438,49 +438,63 @@ module MyLib
       end
 
       # Update email and phone number
-      def update_contact(customer_id:, email:, phone_number:)
-        customer = ChargeBee::Customer.retrieve(customer_id)&.customer
+      def update_contact(user:, email:, phone_number:)
+        customer = ChargeBee::Customer.retrieve(user.chargebee_customer_id)&.customer
+        billing_address = customer.billing_address
 
-        ChargeBee::Customer.update(customer_id, {
+        # Update customer info
+        ChargeBee::Customer.update(user.chargebee_customer_id, {
+          first_name: customer.first_name,
+          last_name: customer.last_name,
           email: email,
           phone: phone_number
         })
 
-        ChargeBee::Customer.update_billing_info(customer_id, {
+        # Update billing address
+        ChargeBee::Customer.update_billing_info(user.chargebee_customer_id, {
           billing_address: {
-            phone: phone_number,
-            email: email
+            first_name: billing_address.first_name,
+            last_name: billing_address.last_name,
+            line1: billing_address.line1,
+            line2: billing_address.line2,
+            city: billing_address.city,
+            state: billing_address.state,
+            zip: billing_address.zip,
+            country: billing_address.country,
+            email: email,
+            phone: phone_number
           }
         })
 
-        get_subscription_list(
-          chargebee_customer_id: customer_id
-        ).each do |entry|
-          ChargeBee::Address.update({
-            subscription_id: entry.subscription.id,
-            label: "shipping_address",
-            email: email,
-            phone: phone_number
-          })
-        end
-
         # Trial user, update first order details - does not update invoice details
-        list = ChargeBee::Invoice.list({
-          "customer_id[is]": customer_id
-        })
-
-        linked_orders = []
-        list.each do |entry|
-          linked_orders.push(entry.invoice.linked_orders.map { |lo| lo.id })
-        end
-
-        linked_orders.flatten.each do |linked_order|
-          ChargeBee::Order.update(linked_order, {
-            shipping_address: {
-              email: email,
-              phone: phone_number
-            }
+        if user.subscription_phase_status == "waiting_for_trial_shipment"
+          list = ChargeBee::Invoice.list({
+            "customer_id[is]": user.chargebee_customer_id
           })
+
+          linked_orders = []
+          list.each do |entry|
+            linked_orders = entry.invoice.linked_orders
+            linked_orders.map { |linked_order|
+              shipping_address = linked_order.shipping_address
+              ChargeBee::Order.update(linked_order.id, {
+                shipping_address: {
+                  first_name: shipping_address.first_name,
+                  last_name: shipping_address.last_name,
+                  line1: shipping_address.line1,
+                  line2: shipping_address.line2,
+                  line3: shipping_address.line3,
+                  city: shipping_address.city,
+                  state_code: shipping_address.state_code,
+                  state: shipping_address.sate,
+                  zip: shipping_address.zip,
+                  country: shipping_address.country,
+                  email: email,
+                  phone: phone_number
+                }
+              })
+            }
+          end
         end
 
         {
