@@ -294,8 +294,9 @@ class Api::V1::UsersController < ApplicationController
   # Update email and password
   def update_contact
     if update_contact_params_valid?
+      @user.update_columns(email: update_contact_params[:email])
       result = MyLib::Chargebee.update_contact(
-        customer_id: @user.chargebee_customer_id,
+        user: @user,
         email: update_contact_params[:email],
         phone_number: update_contact_params[:phone_number]
       )
